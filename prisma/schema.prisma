@@ -10,10 +10,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Connection {
-  id       Int      @id @default(autoincrement())
-  hostname String
-  protocol String
-  method   String
-  date     DateTime @default(now())
+model Sequence {
+  id            Int            @id @default(autoincrement())
+  start         DateTime       @default(now())
+  end           DateTime?
+  w_count       Int?
+  u_count       Int?
+  b_count       Int?
+  r_count       Int?
+  g_count       Int?
+  comment       String?
+  chosen_colour ChosenColour[] // Only one !
+  measures      Measure[]
+}
+
+model ChosenColour {
+  id           Int      @id @default(autoincrement())
+  colour_count Int?
+  idSequence   Int
+  sequence     Sequence @relation(fields: [sequenceId], references: [id])
+  sequenceId   Int      @unique
+}
+
+model Measure {
+  id         Int      @id @default(autoincrement())
+  timestamp  DateTime @default(now())
+  colour     Int
+  idSequence Int
+  sequence   Sequence @relation(fields: [sequenceId], references: [id])
+  sequenceId Int
 }
