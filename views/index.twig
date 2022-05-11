@@ -1,0 +1,26 @@
+{% extends 'layout.twig' %}
+
+{% block body %}
+<div class="container">
+    <h1 id="main-title">{{title}}</h1>
+    <p id="paragraph">Click "Show" to check all previous connections.</p>
+    <button id="display" class="btn btn-primary">Show</button>
+    <table class="mt-2 table table-striped table-inverse table-responsive">
+        <thead class="thead-inverse">
+            <tr>
+                <th>Hostname</th>
+                <th>Protocol</th>
+                <th>Method</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/javascripts/index.js"></script>
+{% endblock scripts %}
