@@ -2,7 +2,7 @@ const insert = document.getElementById("insert");
 const show = document.getElementById("show");
 
 insert.addEventListener("click", () => {
-    $.post("/api/insert");
+    $.post("/api/new-record", {comment : "Comment from client", chosen_colour: rndCol()});
 })
 
 show.addEventListener("click", () => {
@@ -12,11 +12,15 @@ show.addEventListener("click", () => {
 setInterval(() => {
     $.ajax({
         type: "post",
-        url: "/",
-        data: {test: "Hello, I'm a spammy client."},
+        url: "/api/send-measure",
+        data: { colour: rndCol() },
         dataType: "json",
         success: function (response) {
-            console.log(JSON.parse(response).hello);
+            console.log(response);
         }
     });
-},10000)
+},1000)
+
+function rndCol() {
+    return Math.floor(Math.random()*5+1);
+}
