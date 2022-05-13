@@ -1,3 +1,14 @@
+const insert = document.getElementById("insert");
+const show = document.getElementById("show");
+
+insert.addEventListener("click", () => {
+    $.post("/api/insert");
+})
+
+show.addEventListener("click", () => {
+    $.post("/api/show");
+})
+
 setInterval(() => {
     $.ajax({
         type: "post",
@@ -8,4 +19,4 @@ setInterval(() => {
             console.log(JSON.parse(response).hello);
         }
     });
-},1000)
+},10000)
