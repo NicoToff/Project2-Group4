@@ -1,12 +1,12 @@
 const insert = document.getElementById("insert");
-const show = document.getElementById("show");
-
+const end = document.getElementById("end");
+const lorem = `Lorem ipsum dolor sit amet consectetur adipisicing elit Inventore nemo ipsam architecto similique quo praesentium Magnam aut quibusdam maiores voluptate provident quos perspiciatis fugiat consectetur nobis molestias aliquid optio nemo?`.split(" ")
 insert.addEventListener("click", () => {
-    $.post("/api/new-record", {comment : "Comment from client", chosen_colour: rndCol()});
+    $.post("/api/new-record", {comment : lorem[Math.floor(Math.random()*lorem.length)], chosen_colour: rndCol()});
 })
 
-show.addEventListener("click", () => {
-    $.post("/api/show");
+end.addEventListener("click", () => {
+    $.post("/api/end-sequence");
 })
 
 setInterval(() => {
@@ -16,7 +16,7 @@ setInterval(() => {
         data: { colour: rndCol() },
         dataType: "json",
         success: function (response) {
-            console.log(response);
+            console.log((JSON.parse(response)).message);
         }
     });
 },1000)

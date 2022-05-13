@@ -9,6 +9,7 @@ const db = mysql.createConnection({
   database: "group4"
 })
 
+const [WHITE,BLUE,BLACK,RED,GREEN,ANOMALY] = ["1","2","3","4","5","6"];
 
 //const { SerialPort } = require("serialport"); // See https://serialport.io/docs/guide-usage
 //const { ReadlineParser } = require("@serialport/parser-readline"); // See https://serialport.io/docs/api-parser-readline
@@ -27,34 +28,56 @@ const db = mysql.createConnection({
 let currentSequenceId = null;
 let currentColourId = null;
 let currentColour = null;
+let colourCounters = [,0,0,0,0,0,0]; // x,white,blue,black,red,green,anomalies
 let matchCounter = 0;
+let lastMeasure
 
 dbReachable();
-
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
 });
 
-/* POST test */
+/* POST catching a measurement */
 router.post('/api/send-measure', function(req, res, next) {
-    if(currentSequenceId != null && currentColour != null){
-        console.log(`Measured colour : ${clr(req.body.colour)}`);
-        console.log(`currentSequence = ${currentSequenceId}   currentColour = ${clr(currentColour)}`);
-        if(req.body.colour === currentColour){
-            console.log(`IT'S A MATCH : ${clr(req.body.colour)} == ${clr(currentColour)}`);
+    if(currentSequenceId != null && currentColour != null) {
+        const measuredColour = req.body.colour;
+        console.log(`### Measured colour : ${clr(measuredColour)}`);
+        //console.log(`currentSequence = ${currentSequenceId}   currentColour = ${clr(currentColour)}`);
+        
+        const now = new Date(Date.now());
+
+        db.query(
+            `INSERT INTO Measure (timestamp,colour,Sequence_id) VALUES (?,?,?)`,
+                    [sqlDateFormat(now), measuredColour, currentSequenceId],
+                    (err,result) => {
+                        if(err) console.error(err);
+                    }
+        )
+
+        switch(measuredColour){
+            case WHITE:   db.query(`UPDATE Sequence SET w_count = ? WHERE id = ?`,  [colourCounters[Number(WHITE)]++,currentSequenceId]);break;
+            case BLUE:    db.query(`UPDATE Sequence SET u_count = ? WHERE id = ?`,  [colourCounters[Number(BLUE)]++,currentSequenceId]);break;
+            case BLACK:   db.query(`UPDATE Sequence SET b_count = ? WHERE id = ?`,  [colourCounters[Number(BLACK)]++,currentSequenceId]);break;
+            case RED:     db.query(`UPDATE Sequence SET r_count = ? WHERE id = ?`,  [colourCounters[Number(RED)]++,currentSequenceId]);break;
+            case GREEN:   db.query(`UPDATE Sequence SET g_count = ? WHERE id = ?`,  [colourCounters[Number(GREEN)]++,currentSequenceId]);break;
+            default:      db.query(`UPDATE Sequence SET anomalies = ? WHERE id = ?`,[colourCounters[Number(ANOMALY)]++,currentSequenceId]);break;
+        }
+
+        if(measuredColour === currentColour){
+            console.log(`### IT'S A MATCH : ${clr(measuredColour)} == ${clr(currentColour)}`);
             db.query(
                 `UPDATE ChosenColour SET colour_count = ?
                  WHERE id = ?`,
                 [matchCounter++,currentColourId],
                 (err,result) => {
                     if(err) console.error(err);
-                    else console.log(result);
+                    else console.log(`### ${result.info}`);
                 }
             )
-        }            
-        res.status(200).json(JSON.stringify(`SERVER: Measure sent to Sequence#${currentSequenceId}`));
+        }       
+        res.status(200).json(JSON.stringify({message: `SERVER: Measure sent to Sequence#${currentSequenceId}`}));
         
     }
     else {
@@ -62,7 +85,25 @@ router.post('/api/send-measure', function(req, res, next) {
     }
 });
 
-/* POST Create a sequence */
+/* POST ending a sequence */
+router.post('/api/end-sequence', function(req, res, next) {
+    const now = new Date(Date.now());
+
+    db.query(`UPDATE Sequence SET end = ? WHERE id = ?`,  [sqlDateFormat(now),currentSequenceId]);
+    
+    console.log(`### End of Sequence id=${currentSequenceId} at ${sqlDateFormat(now)}`)
+
+    // Global variable reset
+    currentSequenceId = null;
+    currentColourId = null;
+    currentColour = null;
+    colourCounters.forEach(c => c = 0);
+    matchCounter = 0;
+
+    
+});
+
+/* POST Create a Sequence and ChosenColour entry */
 router.post('/api/new-record', function(req, res, next) {
 
     const now = new Date(Date.now())
@@ -72,7 +113,7 @@ router.post('/api/new-record', function(req, res, next) {
         (err,result) => {
             if(err) console.error(err);
             else {
-                console.log(result);
+                console.log(`### New Sequence created: id#${result.insertId}`);
                 currentSequenceId = result.insertId;
                 currentColour = req.body.chosen_colour;
                 db.query(
@@ -81,7 +122,8 @@ router.post('/api/new-record', function(req, res, next) {
                     (err,result) => {
                         if(err) console.error(err);
                         else {                            
-                            console.log(result);
+                            console.log(`### New ChosenColour created: id#${result.insertId}`);
+                            console.log(`##### Chosen colour == ${clr(currentColour)}`);
                             currentColourId = result.insertId;
                         }
                     }
@@ -98,7 +140,7 @@ router.post('/api/new-record', function(req, res, next) {
             `SELECT * FROM Sequence LIMIT 20;`,
             (error, result, field) => {
                 if(!error) {
-                    console.log('Requete terminée');
+                    console.log('### Requete terminée');
                     console.log(result);
                 } else {
                     console.log(`${error?.code} : ${error?.sqlMessage}`);
@@ -110,7 +152,7 @@ router.post('/api/new-record', function(req, res, next) {
 function dbReachable() {
     db.ping((err) => {
         if(!err) {
-            console.log("Connected to DB");         
+            console.log("### Connected to DB");         
         }
         else{
             console.error(err)       
@@ -126,13 +168,17 @@ function sqlDateFormat(date) {
 
 function clr(colour) {
     switch(colour) {
-        case 1: case "1": return "white";
-        case 2: case "2": return "blue";
-        case 3: case "3": return "black";
-        case 4: case "4": return "red";
-        case 5: case "5": return "green";
+        case WHITE:  case 1: return "white";
+        case BLUE:   case 2: return "blue";
+        case BLACK:  case 3: return "black";
+        case RED:    case 4: return "red";
+        case GREEN:  case 5: return "green";
         default: return "colour_not_recongnized";
     }
+}
+
+function rndCol() {
+    return Math.floor(Math.random()*5+1);
 }
 
 module.exports = router;
