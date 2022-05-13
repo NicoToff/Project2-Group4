@@ -46,7 +46,7 @@ router.post('/api/send-measure', function(req, res, next) {
         console.log(`### Measured colour : ${clr(measuredColour)}`);
         //console.log(`currentSequence = ${currentSequenceId}   currentColour = ${clr(currentColour)}`);
         
-        const now = new Date(Date.now());
+        const now = new Date();
 
         db.query(
             `INSERT INTO Measure (timestamp,colour,Sequence_id) VALUES (?,?,?)`,
@@ -87,26 +87,30 @@ router.post('/api/send-measure', function(req, res, next) {
 
 /* POST ending a sequence */
 router.post('/api/end-sequence', function(req, res, next) {
-    const now = new Date(Date.now());
+    {
+        const now = new Date();
 
-    db.query(`UPDATE Sequence SET end = ? WHERE id = ?`,  [sqlDateFormat(now),currentSequenceId]);
-    
-    console.log(`### End of Sequence id=${currentSequenceId} at ${sqlDateFormat(now)}`)
+        db.query(`UPDATE Sequence SET end = ? WHERE id = ?`,  [sqlDateFormat(now),currentSequenceId]);
+        
+        console.log(`### End of Sequence id=${currentSequenceId} at ${sqlDateFormat(now)}`)
 
-    // Global variable reset
-    currentSequenceId = null;
-    currentColourId = null;
-    currentColour = null;
-    colourCounters.forEach(c => c = 0);
-    matchCounter = 0;
+        // Global variable reset
+        currentSequenceId = null;
+        currentColourId = null;
+        currentColour = null;
+        colourCounters.forEach(c => c = 0);
+        matchCounter = 0;
+    }
+
+    res.status(200).send()
 
     
 });
 
 /* POST Create a Sequence and ChosenColour entry */
-router.post('/api/new-record', function(req, res, next) {
+router.post('/api/new-sequence', function(req, res, next) {
 
-    const now = new Date(Date.now())
+    const now = new Date()
     db.query(
         `INSERT INTO Sequence (start,comment) VALUES (?,?)`,
         [sqlDateFormat(now),req.body.comment],

@@ -2,7 +2,7 @@ const insert = document.getElementById("insert");
 const end = document.getElementById("end");
 const lorem = `Lorem ipsum dolor sit amet consectetur adipisicing elit Inventore nemo ipsam architecto similique quo praesentium Magnam aut quibusdam maiores voluptate provident quos perspiciatis fugiat consectetur nobis molestias aliquid optio nemo?`.split(" ")
 insert.addEventListener("click", () => {
-    $.post("/api/new-record", {comment : lorem[Math.floor(Math.random()*lorem.length)], chosen_colour: rndCol()});
+    $.post("/api/new-sequence", {comment : lorem[Math.floor(Math.random()*lorem.length)], chosen_colour: rndCol()});
 })
 
 end.addEventListener("click", () => {
