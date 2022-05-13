@@ -11,19 +11,21 @@ const db = mysql.createConnection({
 
 const [WHITE,BLUE,BLACK,RED,GREEN,ANOMALY] = ["1","2","3","4","5","6"];
 
-//const { SerialPort } = require("serialport"); // See https://serialport.io/docs/guide-usage
-//const { ReadlineParser } = require("@serialport/parser-readline"); // See https://serialport.io/docs/api-parser-readline
+const { SerialPort } = require("serialport"); // See https://serialport.io/docs/guide-usage
+const { ReadlineParser } = require("@serialport/parser-readline"); // See https://serialport.io/docs/api-parser-readline
 
-//const port = new SerialPort({
-//    path: "/dev/ttyUSB0",
-//    baudRate: 9600,
-//});
+const port = new SerialPort({
+    path: "/dev/ttyUSB0",
+    baudRate: 9600,
+    endOnClose: true,
+    parity: "none",
+});
 
-//const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
+const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
 
-//parser.on("data", async data => {
-//    console.log(`Data: ${data}`);
-//});
+parser.on("data", async data => {
+    console.log(`Data: ${data}`);
+});
 
 let currentSequenceId = null;
 let currentColourId = null;
