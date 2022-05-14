@@ -42,12 +42,12 @@ router.get("/", function (req, res, next) {
     res.render("index", { title: "Express" });
 });
 
-router.post("/api/fetch-data", (req,res) => {
-    res.status(200).json({colourCounters,recording});
-})
+router.post("/api/fetch-data", (req, res) => {
+    res.status(200).json({ colourCounters, recording });
+});
 
 /* POST catching a measurement */
-setInterval( () => {
+setInterval(() => {
     if (currentSequenceId != null && currentColour != null) {
         recording = true;
         const measuredColour = Number(rndCol());
@@ -87,11 +87,11 @@ setInterval( () => {
             );
         }
     }
-},1000);
+}, 1000);
 
 /* POST ending a sequence */
 router.post("/api/end-sequence", function (req, res, next) {
-    if(recording){
+    if (recording) {
         const now = new Date();
         recording = false;
 
@@ -184,7 +184,7 @@ function clr(colour) {
 }
 
 function rndCol() {
-    return Math.floor(Math.random() * 5 + (Math.random() > 0.8 ? 1:0)).toString();
+    return Math.floor(Math.random() * 5 + (Math.random() > 0.8 ? 1 : 0)).toString();
 }
 
 module.exports = router;
