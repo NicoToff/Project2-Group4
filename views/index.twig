@@ -1,18 +1,18 @@
 {% extends 'layout.twig' %}
 
 {% block deferScripts %}
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
 <script defer src="/javascripts/index.js"></script>
 {% endblock deferScripts %}
 
 {% block body %}
 <div class="container">
-    <h1>Mockup site</h1>
-    <p>Click on the button</p>
-    <button class="btn btn-success" id="insert">Start</button>
-    <button class="btn btn-warning" id="end">End</button>
+  <h1>Mockup site</h1>
+  <p>Click on the button</p>
+  <button class="btn btn-success" id="start">Start</button>
+  <button class="btn btn-warning" id="end">End</button>
 </div>
 <div class="container">
-    <canvas id="myChart"></canvas>
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+  <canvas id="myChart"></canvas>
+</div>
 {% endblock %}

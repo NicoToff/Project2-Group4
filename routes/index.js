@@ -32,28 +32,40 @@ let currentColourId = null;
 let currentColour = null;
 let colourCounters = [0, 0, 0, 0, 0, 0]; // x,white,blue,black,red,green,anomalies
 let matchCounter = 0;
-let lastMeasure;
+let lastMeasure = null;
 let recording = false;
 
 dbReachable();
 
 /* GET home page. */
 router.get("/", function (req, res, next) {
-    res.render("index", { title: "Express" });
+    res.render("index");
+});
+router.post("/", function (req, res, next) {
+    res.status(200).json({ currentSequenceId });
 });
 
+// #region Client AJAX request
+/* Client requesting all the colours counts + recording status 
+   Happens every second. */
 router.post("/api/fetch-data", (req, res) => {
-    res.status(200).json({ colourCounters, recording });
+    if (!recording) {
+        res.status(200).json({ recording });
+    } else {
+        res.status(200).json({ colourCounters, recording });
+    }
 });
+// #endregion
 
-/* POST catching a measurement */
+// #region FakeMeasurements
+/* POST pretending to take a measurement every second */
+/* THIS WILL LATER BE PUT IN parser.on("data", ... ) */
 setInterval(() => {
     if (currentSequenceId != null && currentColour != null) {
         recording = true;
         const measuredColour = Number(rndCol());
         lastMeasure = measuredColour;
         console.log(`### Measured colour : ${clr(measuredColour)}`);
-        //console.log(`currentSequence = ${currentSequenceId}   currentColour = ${clr(currentColour)}`);
 
         const now = new Date();
 
@@ -88,30 +100,9 @@ setInterval(() => {
         }
     }
 }, 1000);
+// #endregion
 
-/* POST ending a sequence */
-router.post("/api/end-sequence", function (req, res, next) {
-    if (recording) {
-        const now = new Date();
-        recording = false;
-
-        db.query(`UPDATE Sequence SET end = ? WHERE id = ?`, [sqlDateFormat(now), currentSequenceId]);
-
-        console.log(`### End of Sequence id=${currentSequenceId} at ${sqlDateFormat(now)}`);
-
-        // Global variable reset
-        currentSequenceId = null;
-        currentColourId = null;
-        currentColour = null;
-        lastMeasure = null;
-        colourCounters.fill(0);
-        matchCounter = 0;
-    }
-
-    res.status(200).send();
-});
-
-/* POST Create a Sequence and ChosenColour entry */
+// #region Create Sequence + ChosenColour in DB
 router.post("/api/new-sequence", function (req, res, next) {
     const now = new Date();
     db.query(
@@ -120,8 +111,10 @@ router.post("/api/new-sequence", function (req, res, next) {
         (err, result) => {
             if (err) console.error(err);
             else {
-                console.log(`### New Sequence created: id#${result.insertId}`);
+                console.log(`########## New Sequence created: id#${result.insertId} ##########`);
                 currentSequenceId = result.insertId;
+                console.log(currentSequenceId);
+                res.status(200).json({ currentSequenceId });
                 currentColour = Number(req.body.chosen_colour);
                 db.query(
                     `INSERT INTO ChosenColour (chosen_colour,Sequence_id) VALUES (?,?)`,
@@ -138,9 +131,31 @@ router.post("/api/new-sequence", function (req, res, next) {
             }
         }
     );
+});
+// #endregion
+
+// #region Ending The Sequence
+router.post("/api/end-sequence", function (req, res, next) {
+    if (recording) {
+        const now = new Date();
+        recording = false;
+
+        db.query(`UPDATE Sequence SET end = ? WHERE id = ?`, [sqlDateFormat(now), currentSequenceId]);
+
+        console.log(`########## End of Sequence id=${currentSequenceId} at ${sqlDateFormat(now)} ##########`);
+
+        // Global variable reset
+        currentSequenceId = null;
+        currentColourId = null;
+        currentColour = null;
+        lastMeasure = null;
+        colourCounters.fill(0);
+        matchCounter = 0;
+    }
 
     res.status(200).send();
 });
+// #endregion
 
 /* POST show sequences */
 router.post("/api/show", function (req, res, next) {
@@ -155,6 +170,7 @@ router.post("/api/show", function (req, res, next) {
     res.status(200).send();
 });
 
+// #region Custom functions
 function dbReachable() {
     db.ping(err => {
         if (!err) {
@@ -183,8 +199,7 @@ function clr(colour) {
     }
 }
 
-function rndCol() {
-    return Math.floor(Math.random() * 5 + (Math.random() > 0.8 ? 1 : 0)).toString();
-}
+const rndCol = () => Math.floor(Math.random() * 5 + (Math.random() > 0.95 ? 1 : 0)).toString();
+// #endregion
 
 module.exports = router;
