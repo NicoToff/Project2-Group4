@@ -1,42 +1,63 @@
 {% extends 'layout.twig' %}
-{% block deferScripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-{% endblock deferScripts %>
 
 {% block body %}
 <div class="container">
   <canvas id="myChart"></canvas>
 </div>
-<script>
-  const labels = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-  ];
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script defer>
+const labels = [
+  'White',
+  'Blue',
+  'Black',
+  'Red',
+  'Green',
+  'Anomalies',
+];
+const data = {
+  labels: labels,
+  datasets: [{
+    label: 'My First Dataset',
+    data: [65, 59, 80, 81, 188, 55, 40],
+    backgroundColor: [
+      'rgba(255, 255, 255, 0.8)',
+      'rgba(54, 162, 235, 0.2)',
+      'rgba(55, 55, 55, 0.2)',
+      'rgba(255, 99, 132, 0.2)',
+      'rgba(75, 192, 192, 0.2)',
+      'rgba(153, 102, 255, 0.2)',
+    ],
+    borderColor: [
+      'rgb(200, 200, 200)',
+      'rgb(54, 162, 235)',
+      'rgb(25, 25, 25)',
+      'rgb(255, 99, 132)',
+      'rgb(75, 192, 192)',      
+      'rgb(153, 102, 255)',
+    ],
+    borderWidth: 2,
+  }]
+};
 
-  const data = {
-    labels: labels,
-    datasets: [{
-      label: 'My First dataset',
-      backgroundColor: 'rgb(255, 99, 132)',
-      borderColor: 'rgb(255, 99, 132)',
-      data: [0, 10, 5, 2, 20, 30, 45],
-    }]
-  };
 
-  const config = {
-    type: 'line',
-    data: data,
-    options: {}
-  };
-</script>
-<script>
+
+const config = {
+  type: 'bar',
+  data: data,
+  options: {
+    indexAxis: 'y',
+  },
+};
+
   const myChart = new Chart(
     document.getElementById('myChart'),
     config
   );
+
+  setInterval(() => {
+    data.datasets[0].data[0]++;
+    myChart.update();
+  },1000)
+
 </script>
 {% endblock body %}

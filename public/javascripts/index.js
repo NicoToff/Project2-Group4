@@ -8,6 +8,9 @@ insert.addEventListener("click", () => {
         chosen_colour: rndCol(),
     });
 });
+const [WHITE, BLUE, BLACK, RED, GREEN, ANOMALY]  = [0, 1, 2, 3, 4, 5];
+
+let recording = false;
 
 end.addEventListener("click", () => {
     $.post("/api/end-sequence");
@@ -16,15 +19,66 @@ end.addEventListener("click", () => {
 setInterval(() => {
     $.ajax({
         type: "post",
-        url: "/api/send-measure",
-        data: { colour: rndCol() },
+        url: "/api/fetch-data",
         dataType: "json",
         success: function (response) {
-            console.log(JSON.parse(response).message);
+            recording = response.recording;
+            if(recording) {
+                data.datasets[0].data = [...response.colourCounters];
+                myChart.update();
+            }
         },
     });
 }, 1000);
 
+const labels = [
+    'White',
+    'Blue',
+    'Black',
+    'Red',
+    'Green',
+    'Anomalies',
+  ];
+  const data = {
+    labels: labels,
+    datasets: [{
+      label: 'My First Dataset',
+      data: [0, 0, 0, 0, 0, 0],
+      backgroundColor: [
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(54, 162, 235, 0.2)',
+        'rgba(55, 55, 55, 0.2)',
+        'rgba(255, 99, 132, 0.2)',
+        'rgba(75, 192, 192, 0.2)',
+        'rgba(153, 102, 255, 0.2)',
+      ],
+      borderColor: [
+        'rgb(200, 200, 200)',
+        'rgb(54, 162, 235)',
+        'rgb(25, 25, 25)',
+        'rgb(255, 99, 132)',
+        'rgb(75, 192, 192)',      
+        'rgb(153, 102, 255)',
+      ],
+      borderWidth: 2,
+    }]
+  };
+  
+  
+  
+  const config = {
+    type: 'bar',
+    data: data,
+    options: {
+      indexAxis: 'y',
+    },
+  };
+  
+    const myChart = new Chart(
+      document.getElementById('myChart'),
+      config
+    );
+
 function rndCol() {
-    return Math.floor(Math.random() * 5 + 1);
+    return Math.floor(Math.random() * 5);
 }

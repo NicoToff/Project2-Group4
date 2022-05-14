@@ -5,9 +5,14 @@
 {% endblock deferScripts %}
 
 {% block body %}
-<h1>Mockup site</h1>
-<p>Click on the button</p>
-<button class="btn btn-success" id="insert">Start</button>
-<button class="btn btn-warning" id="end">End</button>
-
+<div class="container">
+    <h1>Mockup site</h1>
+    <p>Click on the button</p>
+    <button class="btn btn-success" id="insert">Start</button>
+    <button class="btn btn-warning" id="end">End</button>
+</div>
+<div class="container">
+    <canvas id="myChart"></canvas>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
 {% endblock %}

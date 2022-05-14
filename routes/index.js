@@ -9,9 +9,9 @@ const db = mysql.createConnection({
     database: "group4",
 });
 
-const [WHITE, BLUE, BLACK, RED, GREEN, ANOMALY] = ["1", "2", "3", "4", "5", "6"];
+const [WHITE, BLUE, BLACK, RED, GREEN, ANOMALY] = [0, 1, 2, 3, 4, 5];
 
-const { SerialPort } = require("serialport"); // See https://serialport.io/docs/guide-usage
+/*const { SerialPort } = require("serialport"); // See https://serialport.io/docs/guide-usage
 const { ReadlineParser } = require("@serialport/parser-readline"); // See https://serialport.io/docs/api-parser-readline
 
 const port = new SerialPort({
@@ -19,20 +19,21 @@ const port = new SerialPort({
     baudRate: 9600,
     endOnClose: true,
     parity: "none",
-});
+}); 
 
 const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
 
 parser.on("data", async data => {
     console.log(`Data: ${data}`);
-});
+});*/
 
 let currentSequenceId = null;
 let currentColourId = null;
 let currentColour = null;
-let colourCounters = [, 0, 0, 0, 0, 0, 0]; // x,white,blue,black,red,green,anomalies
+let colourCounters = [0, 0, 0, 0, 0, 0]; // x,white,blue,black,red,green,anomalies
 let matchCounter = 0;
 let lastMeasure;
+let recording = false;
 
 dbReachable();
 
@@ -41,10 +42,15 @@ router.get("/", function (req, res, next) {
     res.render("index", { title: "Express" });
 });
 
+router.post("/api/fetch-data", (req,res) => {
+    res.status(200).json({colourCounters,recording});
+})
+
 /* POST catching a measurement */
-router.post("/api/send-measure", function (req, res, next) {
+setInterval( () => {
     if (currentSequenceId != null && currentColour != null) {
-        const measuredColour = req.body.colour;
+        recording = true;
+        const measuredColour = Number(rndCol());
         lastMeasure = measuredColour;
         console.log(`### Measured colour : ${clr(measuredColour)}`);
         //console.log(`currentSequence = ${currentSequenceId}   currentColour = ${clr(currentColour)}`);
@@ -60,12 +66,12 @@ router.post("/api/send-measure", function (req, res, next) {
         );
         // prettier-ignore
         switch(measuredColour){
-            case WHITE:   db.query(`UPDATE Sequence SET w_count = ? WHERE id = ?`,  [colourCounters[Number(WHITE)]++,currentSequenceId]);break;
-            case BLUE:    db.query(`UPDATE Sequence SET u_count = ? WHERE id = ?`,  [colourCounters[Number(BLUE)]++,currentSequenceId]);break;
-            case BLACK:   db.query(`UPDATE Sequence SET b_count = ? WHERE id = ?`,  [colourCounters[Number(BLACK)]++,currentSequenceId]);break;
-            case RED:     db.query(`UPDATE Sequence SET r_count = ? WHERE id = ?`,  [colourCounters[Number(RED)]++,currentSequenceId]);break;
-            case GREEN:   db.query(`UPDATE Sequence SET g_count = ? WHERE id = ?`,  [colourCounters[Number(GREEN)]++,currentSequenceId]);break;
-            default:      db.query(`UPDATE Sequence SET anomalies = ? WHERE id = ?`,[colourCounters[Number(ANOMALY)]++,currentSequenceId]);break;
+            case WHITE:   db.query(`UPDATE Sequence SET w_count = ? WHERE id = ?`,  [colourCounters[WHITE]++,currentSequenceId]);break;
+            case BLUE:    db.query(`UPDATE Sequence SET u_count = ? WHERE id = ?`,  [colourCounters[BLUE]++,currentSequenceId]);break;
+            case BLACK:   db.query(`UPDATE Sequence SET b_count = ? WHERE id = ?`,  [colourCounters[BLACK]++,currentSequenceId]);break;
+            case RED:     db.query(`UPDATE Sequence SET r_count = ? WHERE id = ?`,  [colourCounters[RED]++,currentSequenceId]);break;
+            case GREEN:   db.query(`UPDATE Sequence SET g_count = ? WHERE id = ?`,  [colourCounters[GREEN]++,currentSequenceId]);break;
+            default:      db.query(`UPDATE Sequence SET anomalies = ? WHERE id = ?`,[colourCounters[ANOMALY]++,currentSequenceId]);break;
         }
 
         if (measuredColour === currentColour) {
@@ -80,18 +86,14 @@ router.post("/api/send-measure", function (req, res, next) {
                 }
             );
         }
-        res.status(200).json(
-            JSON.stringify({ message: `SERVER: Measure sent to Sequence#${currentSequenceId}` })
-        );
-    } else {
-        res.status(200).send();
     }
-});
+},1000);
 
 /* POST ending a sequence */
 router.post("/api/end-sequence", function (req, res, next) {
-    {
+    if(recording){
         const now = new Date();
+        recording = false;
 
         db.query(`UPDATE Sequence SET end = ? WHERE id = ?`, [sqlDateFormat(now), currentSequenceId]);
 
@@ -102,7 +104,7 @@ router.post("/api/end-sequence", function (req, res, next) {
         currentColourId = null;
         currentColour = null;
         lastMeasure = null;
-        colourCounters.forEach(c => (c = 0));
+        colourCounters.fill(0);
         matchCounter = 0;
     }
 
@@ -120,7 +122,7 @@ router.post("/api/new-sequence", function (req, res, next) {
             else {
                 console.log(`### New Sequence created: id#${result.insertId}`);
                 currentSequenceId = result.insertId;
-                currentColour = req.body.chosen_colour;
+                currentColour = Number(req.body.chosen_colour);
                 db.query(
                     `INSERT INTO ChosenColour (chosen_colour,Sequence_id) VALUES (?,?)`,
                     [currentColour, currentSequenceId],
@@ -164,24 +166,25 @@ function dbReachable() {
 }
 
 function sqlDateFormat(date) {
-    const ymd = date.toISOString().split("T")[0];
-    const time = date.toISOString().split("T")[1].split(".")[0];
+    const splitDate = date.toISOString().split("T");
+    const ymd = splitDate[0];
+    const time = splitDate[1].split(".")[0];
     return `${ymd} ${time}`; // Returns e.g.: 2022-05-13 00:00:00
 }
 // prettier-ignore
 function clr(colour) {
     switch(colour) {
-        case WHITE:  case 1: return "white";
-        case BLUE:   case 2: return "blue";
-        case BLACK:  case 3: return "black";
-        case RED:    case 4: return "red";
-        case GREEN:  case 5: return "green";
-        default: return "colour_not_recongnized";
+        case WHITE:  return "white";
+        case BLUE:   return "blue";
+        case BLACK:  return "black";
+        case RED:    return "red";
+        case GREEN:  return "green";
+        default:     return "colour_not_recongnized";
     }
 }
 
 function rndCol() {
-    return Math.floor(Math.random() * 5 + 1);
+    return Math.floor(Math.random() * 5 + (Math.random() > 0.8 ? 1:0)).toString();
 }
 
 module.exports = router;
