@@ -21,7 +21,6 @@ router.get("/:id", function (req, res, next) {
     const selectedId = req.params.id;
     db.query(`SELECT * FROM Measure WHERE Measure.Sequence_id = ?`, [selectedId], (error, result, field) => {
         if (!error) {
-            console.log(result);
             console.log("### Requete terminée");
             res.render("history-measure", { result, selectedId });
         } else {
