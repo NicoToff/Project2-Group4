@@ -1,0 +1,54 @@
+{% extends 'layout.twig' %}
+
+{% block deferScripts %}
+{#
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script> #}
+<script defer src="/javascripts/history.js"></script>
+{% endblock deferScripts %}
+
+{% block body %}
+<div class="container">
+    <table class="table table-responsive table-striped text-center">
+        <thead class="table-info">
+            <tr>
+                <th>Id</th>
+                <th>Start</th>
+                <th>End</th>
+                <th class="text-light">W</th>
+                <th class="text-primary">U</th>
+                <th class="text-dark">B</th>
+                <th class="text-danger">R</th>
+                <th class="text-success">G</th>
+                <th class="text-warning">X</th>
+                <th>Comment</th>
+                <th>Sequence</th>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+            {% for sequence in result %}
+            <tr>
+                <td>{{ sequence.id }}</td>
+                <td>{{ sequence.start | date("Y/m/d H:i:s") }}</td>
+                <td>{% if sequence.end == null %}
+                    {{ "" }} {# Si une date est "null", twig envoie par défaut l'heure actuelle... #}
+                    {% else %}
+                    {{ sequence.end | date("Y/m/d H:i:s") }}
+                    {% endif %}
+                </td>
+                <td class="table-light">{{ sequence.w_count }}</td>
+                <td class="table-primary">{{ sequence.u_count }}</td>
+                <td class="table-dark">{{ sequence.b_count }}</td>
+                <td class="table-danger">{{ sequence.r_count }}</td>
+                <td class="table-success">{{ sequence.g_count }}</td>
+                <td class="table-warning">{{ sequence.anomalies }}</td>
+                <td>{{ sequence.comment }}</td>
+                <td>{# Sends a GET request with the corresponding Sequence id #}
+                    <a class="btn btn-warning" href="/history/{{sequence.id}}">&#x1F50E;</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock body %}

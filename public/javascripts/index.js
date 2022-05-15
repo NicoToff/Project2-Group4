@@ -1,3 +1,5 @@
+document.querySelectorAll(".navbar-nav a")[0].classList.add("active");
+
 // #region State management
 /* If a sequence is running, we fetch it's ID to display it */
 $.ajax({

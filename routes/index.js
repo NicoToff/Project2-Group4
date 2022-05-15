@@ -1,13 +1,7 @@
 "use strict";
 const express = require("express");
 const router = express.Router();
-const mysql = require("mysql2");
-const db = mysql.createConnection({
-    host: "db.helhatechniquecharleroi.xyz",
-    user: "group4",
-    password: "NicolasSajad!",
-    database: "group4",
-});
+const db = require("../modules/db");
 
 const [WHITE, BLUE, BLACK, RED, GREEN, ANOMALY] = [0, 1, 2, 3, 4, 5];
 
@@ -67,7 +61,7 @@ setInterval(() => {
         lastMeasure = measuredColour;
         console.log(`### Measured colour : ${clr(measuredColour)}`);
 
-        const now = new Date();
+        const now = new Date(Date.now());
 
         db.query(
             `INSERT INTO Measure (timestamp,colour,Sequence_id) VALUES (?,?,?)`,
@@ -104,7 +98,7 @@ setInterval(() => {
 
 // #region Create Sequence + ChosenColour in DB
 router.post("/api/new-sequence", function (req, res, next) {
-    const now = new Date();
+    const now = new Date(Date.now());
     db.query(
         `INSERT INTO Sequence (start,comment) VALUES (?,?)`,
         [sqlDateFormat(now), req.body.comment],
@@ -113,7 +107,6 @@ router.post("/api/new-sequence", function (req, res, next) {
             else {
                 console.log(`########## New Sequence created: id#${result.insertId} ##########`);
                 currentSequenceId = result.insertId;
-                console.log(currentSequenceId);
                 res.status(200).json({ currentSequenceId });
                 currentColour = Number(req.body.chosen_colour);
                 db.query(
@@ -137,7 +130,7 @@ router.post("/api/new-sequence", function (req, res, next) {
 // #region Ending The Sequence
 router.post("/api/end-sequence", function (req, res, next) {
     if (recording) {
-        const now = new Date();
+        const now = new Date(Date.now());
         recording = false;
 
         db.query(`UPDATE Sequence SET end = ? WHERE id = ?`, [sqlDateFormat(now), currentSequenceId]);
@@ -157,19 +150,6 @@ router.post("/api/end-sequence", function (req, res, next) {
 });
 // #endregion
 
-/* POST show sequences */
-router.post("/api/show", function (req, res, next) {
-    db.query(`SELECT * FROM Sequence LIMIT 20;`, (error, result, field) => {
-        if (!error) {
-            console.log("### Requete terminée");
-            console.log(result);
-        } else {
-            console.log(`${error?.code} : ${error?.sqlMessage}`);
-        }
-    });
-    res.status(200).send();
-});
-
 // #region Custom functions
 function dbReachable() {
     db.ping(err => {
@@ -185,7 +165,7 @@ function sqlDateFormat(date) {
     const splitDate = date.toISOString().split("T");
     const ymd = splitDate[0];
     const time = splitDate[1].split(".")[0];
-    return `${ymd} ${time}`; // Returns e.g.: 2022-05-13 00:00:00
+    return `${ymd} ${time}`; // Returns e.g.: 2022-05-13 12:25:12
 }
 // prettier-ignore
 function clr(colour) {
