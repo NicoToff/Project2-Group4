@@ -72,12 +72,12 @@ setInterval(() => {
         );
         // prettier-ignore
         switch(measuredColour){
-            case WHITE:   db.query(`UPDATE Sequence SET w_count = ? WHERE id = ?`,  [colourCounters[WHITE]++,currentSequenceId]);break;
-            case BLUE:    db.query(`UPDATE Sequence SET u_count = ? WHERE id = ?`,  [colourCounters[BLUE]++,currentSequenceId]);break;
-            case BLACK:   db.query(`UPDATE Sequence SET b_count = ? WHERE id = ?`,  [colourCounters[BLACK]++,currentSequenceId]);break;
-            case RED:     db.query(`UPDATE Sequence SET r_count = ? WHERE id = ?`,  [colourCounters[RED]++,currentSequenceId]);break;
-            case GREEN:   db.query(`UPDATE Sequence SET g_count = ? WHERE id = ?`,  [colourCounters[GREEN]++,currentSequenceId]);break;
-            default:      db.query(`UPDATE Sequence SET anomalies = ? WHERE id = ?`,[colourCounters[ANOMALY]++,currentSequenceId]);break;
+            case WHITE:   db.query(`UPDATE Sequence SET w_count = ? WHERE id = ?`,  [++colourCounters[WHITE],currentSequenceId]);break;
+            case BLUE:    db.query(`UPDATE Sequence SET u_count = ? WHERE id = ?`,  [++colourCounters[BLUE],currentSequenceId]);break;
+            case BLACK:   db.query(`UPDATE Sequence SET b_count = ? WHERE id = ?`,  [++colourCounters[BLACK],currentSequenceId]);break;
+            case RED:     db.query(`UPDATE Sequence SET r_count = ? WHERE id = ?`,  [++colourCounters[RED],currentSequenceId]);break;
+            case GREEN:   db.query(`UPDATE Sequence SET g_count = ? WHERE id = ?`,  [++colourCounters[GREEN],currentSequenceId]);break;
+            default:      db.query(`UPDATE Sequence SET anomalies = ? WHERE id = ?`,[++colourCounters[ANOMALY],currentSequenceId]);break;
         }
 
         if (measuredColour === currentColour) {
