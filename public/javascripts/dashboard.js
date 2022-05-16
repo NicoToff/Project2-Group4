@@ -2,7 +2,8 @@ document.querySelectorAll(".navbar-nav a")[0].classList.add("active");
 
 const optSelectColor = document.getElementById("colour-select");
 const txtComment = document.getElementById("comment");
-
+const chosenColourBox = document.getElementById("chosen-colour");
+let currentColour;
 // #region State management
 /* Reset select box and comments */
 optSelectColor.value = "-";
@@ -11,12 +12,14 @@ txtComment.value = "";
 /* If a sequence is running, we fetch its ID to display it */
 $.ajax({
     type: "post",
-    url: "/",
+    url: "/dashboard",
     dataType: "json",
     success: function (response) {
         if (response.currentSequenceId != null) {
             data.datasets[0].label = `Sequence n°${response.currentSequenceId}`;
             myChart.update();
+            currentColour = response.currentColour;
+            colourTheBox(chosenColourBox, currentColour);
         }
     },
 });
@@ -24,14 +27,12 @@ $.ajax({
 
 // #region Start & End Buttons
 const start = document.getElementById("start");
-const chosenColourBox = document.getElementById("chosen-colour");
-let currentColour;
 
 start.addEventListener("click", () => {
     const clientChosenColour = toColorCode(optSelectColor.value);
     $.ajax({
         type: "post",
-        url: "/api/new-sequence",
+        url: "/dashboard/api/new-sequence",
         data: {
             comment: txtComment.value,
             chosen_colour: clientChosenColour ?? rndCol(),
@@ -48,7 +49,7 @@ start.addEventListener("click", () => {
 
 const end = document.getElementById("end");
 end.addEventListener("click", () => {
-    $.post("/api/end-sequence");
+    $.post("/dashboard/api/end-sequence");
     optSelectColor.value = "-";
     txtComment.value = "";
 });
@@ -103,7 +104,7 @@ const lblChosenColourCounter = document.getElementById("chosen-colour-counter");
 setInterval(() => {
     $.ajax({
         type: "post",
-        url: "/api/fetch-data",
+        url: "/dashboard/api/fetch-data",
         dataType: "json",
         success: function (response) {
             data.datasets[0].data = [...response.colourCounters];
@@ -126,34 +127,25 @@ setInterval(() => {
 // #region Custom functions
 function colourTheBox(box, colour) {
     box.classList.remove(
-        "btn-secondary",
-        "btn-warning",
-        "btn-light",
-        "btn-danger",
-        "btn-success",
-        "btn-primary",
-        "btn-dark"
+        "bg-secondary",
+        "bg-warning",
+        "bg-light",
+        "bg-danger",
+        "bg-success",
+        "bg-primary",
+        "bg-dark"
     );
     const [WHITE, BLUE, BLACK, RED, GREEN] = [0, 1, 2, 3, 4];
-    let bootstrapBtnClass = "btn-";
+    let bootstrapBgClass = "bg-";
+    // prettier-ignore
     switch (colour) {
-        case WHITE:
-            bootstrapBtnClass += "light";
-            break;
-        case BLUE:
-            bootstrapBtnClass += "primary";
-            break;
-        case BLACK:
-            bootstrapBtnClass += "dark";
-            break;
-        case RED:
-            bootstrapBtnClass += "danger";
-            break;
-        case GREEN:
-            bootstrapBtnClass += "success";
-            break;
+        case WHITE: bootstrapBgClass += "light";   break;
+        case BLUE:  bootstrapBgClass += "primary"; break;
+        case BLACK: bootstrapBgClass += "dark";    break;
+        case RED:   bootstrapBgClass += "danger";  break;
+        case GREEN: bootstrapBgClass += "success"; break;
     }
-    box.classList.add(bootstrapBtnClass);
+    box.classList.add(bootstrapBgClass);
 }
 /**
  * @returns 0 to 4

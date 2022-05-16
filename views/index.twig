@@ -7,46 +7,7 @@
 
 {% block body %}
 <div class="container">
-    <h1>Dashboard</h1>
-    <div class="row">
-        <div class="col">
-            <p>Click the buttons to Start or End a sequence.</p>
-            <div>
-                <button class="btn btn-lg btn-success" id="start">Start</button>
-                <button class="btn btn-lg btn-warning" id="end">End</button>
-            </div>
-        </div>
-        <div class="col-2">
-            <h3 class="mt-2">Choose color</h3>
-            <div class="form-group">
-                <select class="form-select" id="colour-select">
-                    <option>-</option>
-                    <option>White</option>
-                    <option>Blue</option>
-                    <option>Black</option>
-                    <option>Red</option>
-                    <option>Green</option>
-                </select>
-            </div>
-        </div>
-        <div class="col-3">
-            <h3 class="mt-2">Current colour count</h3>
-            <div class="btn btn-warning form-control" id="chosen-colour">
-                <div id="chosen-colour-counter">--</div>
-            </div>
-        </div>
-        <div class="col-3">
-            <div class="card bg-secondary mb-3" id="status">
-                <div class="card-body text-center">
-                    <h4 class="card-title" id="status-text"> ---- </h4>
-                </div>
-            </div>
-            <textarea class="form-control" placeholder="Comment" style="resize: none;" maxlength="30"
-                id="comment"></textarea>
-        </div>
-    </div>
-
-    <h2 class="mt-2">Latest sequence</h2>
-    <canvas id="myChart"></canvas>
+    <h1>Welcome!</h1>
+    <p>This project was built during the Multidisciplinary Project 2 unit, at HELHa Charleroi.</p>
 </div>
 {% endblock %}
