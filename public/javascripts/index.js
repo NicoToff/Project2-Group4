@@ -17,6 +17,8 @@ $.ajax({
 
 // #region Start & End Buttons
 const start = document.getElementById("start");
+const chosenColourBox = document.getElementById("chosen-colour");
+let currentColour;
 // prettier-ignore
 const lorem = `Lorem ipsum dolor sit amet consectetur adipisicing elit Inventore nemo ipsam architecto similique quo praesentium Magnam aut quibusdam maiores voluptate provident quos perspiciatis fugiat consectetur nobis molestias aliquid optio nemo?`.split(" ");
 start.addEventListener("click", () => {
@@ -31,6 +33,8 @@ start.addEventListener("click", () => {
         success: function (response) {
             data.datasets[0].label = `Sequence n°${response.currentSequenceId}`;
             myChart.update();
+            currentColour = response.currentColour;
+            colourTheBox(chosenColourBox, currentColour);
         },
     });
 });
@@ -84,7 +88,7 @@ const myChart = new Chart(barGraph, config);
 
 const statusBox = document.getElementById("status");
 const statusText = document.getElementById("status-text");
-
+const chosenColourCounter = document.getElementById("chosen-colour-counter");
 setInterval(() => {
     $.ajax({
         type: "post",
@@ -92,6 +96,7 @@ setInterval(() => {
         dataType: "json",
         success: function (response) {
             data.datasets[0].data = [...response.colourCounters];
+            chosenColourCounter.textContent = response.colourCounters[currentColour];
             myChart.update();
             if (response.recording) {
                 statusBox.classList.remove("bg-danger", "bg-secondary");
@@ -108,4 +113,17 @@ setInterval(() => {
 
 function rndCol() {
     return Math.floor(Math.random() * 5);
+}
+
+function colourTheBox(box, colour) {
+    box.classList.remove(
+        "btn-secondary",
+        "btn-warning",
+        "btn-light",
+        "btn-danger",
+        "btn-success",
+        "btn-primary",
+        "btn-dark"
+    );
+    //  TODO OOO
 }

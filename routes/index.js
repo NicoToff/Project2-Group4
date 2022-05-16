@@ -141,7 +141,6 @@ router.post("/api/new-sequence", function (req, res, next) {
                 } else {
                     console.log(`########## New Sequence created: id#${result.insertId} ##########`);
                     currentSequenceId = result.insertId;
-                    res.status(200).json({ currentSequenceId });
                     currentColour = Number(req.body.chosen_colour);
                     mqtt.publish("/multi4/colour", clr(lastMeasure), () => {
                         console.log(`${clr(currentColour)} SENT TO MQTT`);
@@ -157,6 +156,7 @@ router.post("/api/new-sequence", function (req, res, next) {
                                 console.log(`### New ChosenColour created: id#${result.insertId}`);
                                 console.log(`##### Chosen colour == ${clr(currentColour)}`);
                                 currentColourId = result.insertId;
+                                res.status(200).json({ currentSequenceId, currentColour });
                             }
                         }
                     );
