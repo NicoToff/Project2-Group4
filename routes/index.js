@@ -2,6 +2,12 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../modules/db");
+const mqtt = require("mqtt").connect("mqtt://helhatechniquecharleroi.xyz:1883", {
+    username: "multi4",
+    password: "multi4",
+    // reconnectPeriod: 1000,
+    // connectTimeout: 60000,
+});
 
 const [WHITE, BLUE, BLACK, RED, GREEN, ANOMALY] = [0, 1, 2, 3, 4, 5];
 
@@ -23,18 +29,26 @@ parser.on("data", async data => {
 
 let currentSequenceId = null;
 let currentColourId = null;
+
 let currentColour = null;
-let colourCounters = [0, 0, 0, 0, 0, 0]; // x,white,blue,black,red,green,anomalies
 let matchCounter = 0;
 let lastMeasure = null;
+
+let colourCounters = [0, 0, 0, 0, 0, 0]; // white,blue,black,red,green,anomalies
+let lastSequence = [];
 let recording = false;
 
 dbReachable();
 
+mqtt.subscribe(["/multi4/lu", "/multi4/colour", "/multi4/cpt", "/multi4/sequence"]);
+mqtt.on("message", (topic, message) => {
+    console.log(`READING ${topic} : ${message}`);
+});
 /* GET home page. */
 router.get("/", function (req, res, next) {
-    res.render("index");
+    res.status(200).render("index");
 });
+/* Post current state (state management) */
 router.post("/", function (req, res, next) {
     res.status(200).json({ currentSequenceId });
 });
@@ -43,11 +57,7 @@ router.post("/", function (req, res, next) {
 /* Client requesting all the colours counts + recording status 
    Happens every second. */
 router.post("/api/fetch-data", (req, res) => {
-    if (!recording) {
-        res.status(200).json({ recording });
-    } else {
-        res.status(200).json({ colourCounters, recording });
-    }
+    res.status(200).json({ colourCounters, recording });
 });
 // #endregion
 
@@ -55,8 +65,7 @@ router.post("/api/fetch-data", (req, res) => {
 /* POST pretending to take a measurement every second */
 /* THIS WILL LATER BE PUT IN parser.on("data", ... ) */
 setInterval(() => {
-    if (currentSequenceId != null && currentColour != null) {
-        recording = true;
+    if (currentSequenceId != null && currentColour != null && recording === true) {
         const measuredColour = Number(rndCol());
         lastMeasure = measuredColour;
         console.log(`### Measured colour : ${clr(measuredColour)}`);
@@ -70,6 +79,13 @@ setInterval(() => {
                 if (err) console.error(err);
             }
         );
+
+        mqtt.publish("/multi4/lu", clr(lastMeasure), () => {
+            console.log(`${clr(lastMeasure)} SENT TO MQTT`);
+        });
+
+        lastSequence.push(clr(measuredColour));
+
         // prettier-ignore
         switch(measuredColour){
             case WHITE:   db.query(`UPDATE Sequence SET w_count = ? WHERE id = ?`,  [++colourCounters[WHITE],currentSequenceId]);break;
@@ -85,12 +101,15 @@ setInterval(() => {
             db.query(
                 `UPDATE ChosenColour SET colour_count = ?
                  WHERE id = ?`,
-                [matchCounter++, currentColourId],
+                [++matchCounter, currentColourId],
                 (err, result) => {
                     if (err) console.error(err);
                     else console.log(`### ${result.info}`);
                 }
             );
+            mqtt.publish("/multi4/cpt", matchCounter.toString(), () => {
+                console.log(`${matchCounter} SENT TO MQTT`);
+            });
         }
     }
 }, 1000);
@@ -98,32 +117,55 @@ setInterval(() => {
 
 // #region Create Sequence + ChosenColour in DB
 router.post("/api/new-sequence", function (req, res, next) {
-    const now = new Date(Date.now());
-    db.query(
-        `INSERT INTO Sequence (start,comment) VALUES (?,?)`,
-        [sqlDateFormat(now), req.body.comment],
-        (err, result) => {
-            if (err) console.error(err);
-            else {
-                console.log(`########## New Sequence created: id#${result.insertId} ##########`);
-                currentSequenceId = result.insertId;
-                res.status(200).json({ currentSequenceId });
-                currentColour = Number(req.body.chosen_colour);
-                db.query(
-                    `INSERT INTO ChosenColour (chosen_colour,Sequence_id) VALUES (?,?)`,
-                    [currentColour, currentSequenceId],
-                    (err, result) => {
-                        if (err) console.error(err);
-                        else {
-                            console.log(`### New ChosenColour created: id#${result.insertId}`);
-                            console.log(`##### Chosen colour == ${clr(currentColour)}`);
-                            currentColourId = result.insertId;
+    if (!recording) {
+        // #region Global variable reset
+        currentSequenceId = null;
+        currentColourId = null;
+        currentColour = null;
+        lastMeasure = null;
+        colourCounters.fill(0);
+        matchCounter = 0;
+        lastSequence = [];
+        // #endregion
+
+        recording = true;
+        const now = new Date(Date.now());
+
+        db.query(
+            `INSERT INTO Sequence (start,comment) VALUES (?,?)`,
+            [sqlDateFormat(now), req.body.comment],
+            (err, result) => {
+                if (err) {
+                    console.error(err);
+                    res.status(503).send(); // 503 Service Unavailable
+                } else {
+                    console.log(`########## New Sequence created: id#${result.insertId} ##########`);
+                    currentSequenceId = result.insertId;
+                    res.status(200).json({ currentSequenceId });
+                    currentColour = Number(req.body.chosen_colour);
+                    mqtt.publish("/multi4/colour", clr(lastMeasure), () => {
+                        console.log(`${clr(currentColour)} SENT TO MQTT`);
+                    });
+                    db.query(
+                        `INSERT INTO ChosenColour (chosen_colour,Sequence_id) VALUES (?,?)`,
+                        [currentColour, currentSequenceId],
+                        (err, result) => {
+                            if (err) {
+                                console.error(err);
+                                res.status(503).send(); // 503 Service Unavailable
+                            } else {
+                                console.log(`### New ChosenColour created: id#${result.insertId}`);
+                                console.log(`##### Chosen colour == ${clr(currentColour)}`);
+                                currentColourId = result.insertId;
+                            }
                         }
-                    }
-                );
+                    );
+                }
             }
-        }
-    );
+        );
+    } else {
+        res.status(204).send(); // 204 No Content
+    }
 });
 // #endregion
 
@@ -132,21 +174,20 @@ router.post("/api/end-sequence", function (req, res, next) {
     if (recording) {
         const now = new Date(Date.now());
         recording = false;
+        console.table(lastSequence);
 
         db.query(`UPDATE Sequence SET end = ? WHERE id = ?`, [sqlDateFormat(now), currentSequenceId]);
 
+        mqtt.publish("/multi4/sequence", JSON.stringify(lastSequence), () => {
+            console.log(`${JSON.stringify(lastSequence)} SENT TO MQTT`);
+        });
+
         console.log(`########## End of Sequence id=${currentSequenceId} at ${sqlDateFormat(now)} ##########`);
 
-        // Global variable reset
-        currentSequenceId = null;
-        currentColourId = null;
-        currentColour = null;
-        lastMeasure = null;
-        colourCounters.fill(0);
-        matchCounter = 0;
+        res.status(200).send();
+    } else {
+        res.status(204).send(); // 204 No Content
     }
-
-    res.status(200).send();
 });
 // #endregion
 

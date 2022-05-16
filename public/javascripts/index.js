@@ -82,7 +82,8 @@ const config = {
 const myChart = new Chart(barGraph, config);
 // #endregion
 
-let recording = false;
+const statusBox = document.getElementById("status");
+const statusText = document.getElementById("status-text");
 
 setInterval(() => {
     $.ajax({
@@ -90,10 +91,16 @@ setInterval(() => {
         url: "/api/fetch-data",
         dataType: "json",
         success: function (response) {
-            recording = response.recording;
-            if (recording) {
-                data.datasets[0].data = [...response?.colourCounters];
-                myChart.update();
+            data.datasets[0].data = [...response.colourCounters];
+            myChart.update();
+            if (response.recording) {
+                statusBox.classList.remove("bg-danger", "bg-secondary");
+                statusBox.classList.add("bg-success");
+                statusText.textContent = "Recording";
+            } else {
+                statusBox.classList.remove("bg-success", "bg-secondary");
+                statusBox.classList.add("bg-danger");
+                statusText.textContent = "Stopped";
             }
         },
     });
