@@ -27,6 +27,7 @@
                 <th class="text-warning">X</th>
                 <th>Comment</th>
                 <th>Sequence</th>
+                <th>Chosen</th>
             </tr>
         </thead>
         <tbody id="table-body">
@@ -49,6 +50,9 @@
                 <td>{{ sequence.comment }}</td>
                 <td>{# Sends a GET request with the corresponding Sequence id #}
                     <a class="btn btn-warning" href="/history/{{sequence.id}}">&#x1F50E;</a>
+                </td>
+                <td>
+                    <a class="btn btn-success" href="/history/chosen/{{sequence.id}}">&#x1F3A8;</a>
                 </td>
             </tr>
             {% endfor %}

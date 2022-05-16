@@ -17,6 +17,24 @@ router.get("/", function (req, res, next) {
     });
 });
 
+router.get("/chosen/:id", function (req, res, next) {
+    const selectedId = req.params.id;
+    db.query(
+        `SELECT * FROM ChosenColour WHERE ChosenColour.Sequence_id = ?`,
+        [selectedId],
+        (error, result, field) => {
+            if (!error) {
+                console.log("### Requete terminée");
+                result = result[0];
+                res.render("history-measure-chosen", { result, selectedId });
+            } else {
+                console.log(`${error?.code} : ${error?.sqlMessage}`);
+                res.status(500).send();
+            }
+        }
+    );
+});
+
 router.get("/:id", function (req, res, next) {
     const selectedId = req.params.id;
     db.query(`SELECT * FROM Measure WHERE Measure.Sequence_id = ?`, [selectedId], (error, result, field) => {

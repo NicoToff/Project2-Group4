@@ -5,6 +5,7 @@ const db = require("../modules/db");
 const mqtt = require("mqtt").connect("mqtt://helhatechniquecharleroi.xyz:1883", {
     username: "multi4",
     password: "multi4",
+
     // reconnectPeriod: 1000,
     // connectTimeout: 60000,
 });

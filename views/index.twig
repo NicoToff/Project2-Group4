@@ -16,10 +16,23 @@
                 <button class="btn btn-lg btn-warning" id="end">End</button>
             </div>
         </div>
+        <div class="col-2">
+            <h3 class="mt-2">Choose color</h3>
+            <div class="form-group">
+                <select class="form-select" id="colour-select">
+                    <option>-</option>
+                    <option>White</option>
+                    <option>Blue</option>
+                    <option>Black</option>
+                    <option>Red</option>
+                    <option>Green</option>
+                </select>
+            </div>
+        </div>
         <div class="col-3">
             <h3 class="mt-2">Current colour count</h3>
-            <div class="btn btn-secondary p-4 m-1" id="chosen-color">
-                <div style="min-width: 6em" id="chosen-colour-counter">{{ counter }}</div>
+            <div class="btn btn-warning form-control" id="chosen-colour">
+                <div id="chosen-colour-counter">--</div>
             </div>
         </div>
         <div class="col-3">
@@ -28,6 +41,8 @@
                     <h4 class="card-title" id="status-text"> ---- </h4>
                 </div>
             </div>
+            <textarea class="form-control" placeholder="Comment" style="resize: none;" maxlength="30"
+                id="comment"></textarea>
         </div>
     </div>
 

@@ -1,0 +1,63 @@
+{% extends 'layout.twig' %}
+
+{% block deferScripts %}
+{% endblock deferScripts %}
+
+{% block body %}
+<main class="container">
+    <h1>Chosen Colour for Sequence n°{{selectedId}}</h1>
+    <div id="display-area">
+        {% if result.chosen_colour == 0 %}
+        <div class="btn btn-light p-4 m-1" data-colour="light">
+            <div style="min-width: 2em">
+                {% if result.colour_count == null %}
+                {{ "0" }}
+                {% else %}
+                {{ result.colour_count }}
+                {% endif %}
+            </div>
+        </div>
+        {% elseif result.chosen_colour == 1 %}
+        <div class="btn btn-primary p-4 m-1" data-colour="primary">
+            <div style="min-width: 2em">
+                {% if result.colour_count == null %}
+                {{ "0" }}
+                {% else %}
+                {{ result.colour_count }}
+                {% endif %}
+            </div>
+        </div>
+        {% elseif result.chosen_colour == 2 %}
+        <div class="btn btn-dark p-4 m-1" data-colour="dark">
+            <div style="min-width: 2em">
+                {% if result.colour_count == null %}
+                {{ "0" }}
+                {% else %}
+                {{ result.colour_count }}
+                {% endif %}
+            </div>
+        </div>
+        {% elseif result.chosen_colour == 3 %}
+        <div class="btn btn-danger p-4 m-1" data-colour="danger">
+            <div style="min-width: 2em">
+                {% if result.colour_count == null %}
+                {{ "0" }}
+                {% else %}
+                {{ result.colour_count }}
+                {% endif %}
+            </div>
+        </div>
+        {% elseif result.chosen_colour == 4 %}
+        <div class="btn btn-success p-4 m-1" data-colour="success">
+            <div style="min-width: 2em">
+                {% if result.colour_count == null %}
+                {{ "0" }}
+                {% else %}
+                {{ result.colour_count }}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</main>
+{% endblock body %}

@@ -1,7 +1,14 @@
 document.querySelectorAll(".navbar-nav a")[0].classList.add("active");
 
+const optSelectColor = document.getElementById("colour-select");
+const txtComment = document.getElementById("comment");
+
 // #region State management
-/* If a sequence is running, we fetch it's ID to display it */
+/* Reset select box and comments */
+optSelectColor.value = "-";
+txtComment.value = "";
+
+/* If a sequence is running, we fetch its ID to display it */
 $.ajax({
     type: "post",
     url: "/",
@@ -19,15 +26,15 @@ $.ajax({
 const start = document.getElementById("start");
 const chosenColourBox = document.getElementById("chosen-colour");
 let currentColour;
-// prettier-ignore
-const lorem = `Lorem ipsum dolor sit amet consectetur adipisicing elit Inventore nemo ipsam architecto similique quo praesentium Magnam aut quibusdam maiores voluptate provident quos perspiciatis fugiat consectetur nobis molestias aliquid optio nemo?`.split(" ");
+
 start.addEventListener("click", () => {
+    const clientChosenColour = toColorCode(optSelectColor.value);
     $.ajax({
         type: "post",
         url: "/api/new-sequence",
         data: {
-            comment: lorem[Math.floor(Math.random() * lorem.length)],
-            chosen_colour: rndCol(),
+            comment: txtComment.value,
+            chosen_colour: clientChosenColour ?? rndCol(),
         },
         dataType: "json",
         success: function (response) {
@@ -38,9 +45,12 @@ start.addEventListener("click", () => {
         },
     });
 });
+
 const end = document.getElementById("end");
 end.addEventListener("click", () => {
     $.post("/api/end-sequence");
+    optSelectColor.value = "-";
+    txtComment.value = "";
 });
 // #endregion
 
@@ -86,9 +96,10 @@ const config = {
 const myChart = new Chart(barGraph, config);
 // #endregion
 
-const statusBox = document.getElementById("status");
-const statusText = document.getElementById("status-text");
-const chosenColourCounter = document.getElementById("chosen-colour-counter");
+// #region Dynamic Content (AJAX)
+const lblStatusBox = document.getElementById("status");
+const lblStatusText = document.getElementById("status-text");
+const lblChosenColourCounter = document.getElementById("chosen-colour-counter");
 setInterval(() => {
     $.ajax({
         type: "post",
@@ -96,25 +107,23 @@ setInterval(() => {
         dataType: "json",
         success: function (response) {
             data.datasets[0].data = [...response.colourCounters];
-            chosenColourCounter.textContent = response.colourCounters[currentColour];
+            lblChosenColourCounter.textContent = response.colourCounters[currentColour] ?? "--";
             myChart.update();
             if (response.recording) {
-                statusBox.classList.remove("bg-danger", "bg-secondary");
-                statusBox.classList.add("bg-success");
-                statusText.textContent = "Recording";
+                lblStatusBox.classList.remove("bg-danger", "bg-secondary");
+                lblStatusBox.classList.add("bg-success");
+                lblStatusText.textContent = "Recording";
             } else {
-                statusBox.classList.remove("bg-success", "bg-secondary");
-                statusBox.classList.add("bg-danger");
-                statusText.textContent = "Stopped";
+                lblStatusBox.classList.remove("bg-success", "bg-secondary");
+                lblStatusBox.classList.add("bg-danger");
+                lblStatusText.textContent = "Stopped";
             }
         },
     });
 }, 1000);
+// #endregion
 
-function rndCol() {
-    return Math.floor(Math.random() * 5);
-}
-
+// #region Custom functions
 function colourTheBox(box, colour) {
     box.classList.remove(
         "btn-secondary",
@@ -125,5 +134,55 @@ function colourTheBox(box, colour) {
         "btn-primary",
         "btn-dark"
     );
-    //  TODO OOO
+    const [WHITE, BLUE, BLACK, RED, GREEN] = [0, 1, 2, 3, 4];
+    let bootstrapBtnClass = "btn-";
+    switch (colour) {
+        case WHITE:
+            bootstrapBtnClass += "light";
+            break;
+        case BLUE:
+            bootstrapBtnClass += "primary";
+            break;
+        case BLACK:
+            bootstrapBtnClass += "dark";
+            break;
+        case RED:
+            bootstrapBtnClass += "danger";
+            break;
+        case GREEN:
+            bootstrapBtnClass += "success";
+            break;
+    }
+    box.classList.add(bootstrapBtnClass);
 }
+/**
+ * @returns 0 to 4
+ */
+function rndCol() {
+    return Math.floor(Math.random() * 5);
+}
+
+/**
+ * Returns a number base on the input from the html file.
+ * @param {string} option
+ * @returns The colour code (0 to 4)
+ */
+
+function toColorCode(option) {
+    switch (option) {
+        case "-":
+            return null;
+        case "White":
+            return 0;
+        case "Blue":
+            return 1;
+        case "Black":
+            return 2;
+        case "Red":
+            return 3;
+        case "Green":
+            return 4;
+    }
+}
+
+// #endregion
