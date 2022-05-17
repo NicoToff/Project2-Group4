@@ -3,6 +3,7 @@ document.querySelectorAll(".navbar-nav a")[0].classList.add("active");
 const optSelectColor = document.getElementById("colour-select");
 const txtComment = document.getElementById("comment");
 const chosenColourBox = document.getElementById("chosen-colour");
+const lblDbOK = document.getElementById("db-ok-badge");
 let currentColour;
 // #region State management
 /* Reset select box and comments */
@@ -109,6 +110,15 @@ setInterval(() => {
         success: function (response) {
             data.datasets[0].data = [...response.colourCounters];
             lblChosenColourCounter.textContent = response.colourCounters[currentColour] ?? "--";
+            if (response.dbPingOK === true) {
+                lblDbOK.textContent = "DB reachable";
+                lblDbOK.classList.remove("bg-danger");
+                lblDbOK.classList.add("bg-success");
+            } else {
+                lblDbOK.textContent = "DB unreachable";
+                lblDbOK.classList.remove("bg-success");
+                lblDbOK.classList.add("bg-danger");
+            }
             myChart.update();
             if (response.recording) {
                 lblStatusBox.classList.remove("bg-danger", "bg-secondary");

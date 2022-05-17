@@ -38,6 +38,7 @@ let lastMeasure = null;
 let colourCounters = [0, 0, 0, 0, 0, 0]; // white,blue,black,red,green,anomalies
 let lastSequence = [];
 let recording = false;
+let dbPingOK = false;
 
 dbReachable();
 
@@ -58,7 +59,7 @@ router.post("/", function (req, res, next) {
 /* Client requesting all the colours counts + recording status 
    Happens every second. */
 router.post("/api/fetch-data", (req, res) => {
-    res.status(200).json({ colourCounters, recording });
+    res.status(200).json({ colourCounters, recording, dbPingOK });
 });
 // #endregion
 
@@ -97,8 +98,6 @@ setInterval(() => {
             default:      db.query(`UPDATE Sequence SET anomalies = ? WHERE id = ?`,[++colourCounters[ANOMALY],currentSequenceId]);break;
         }
 
-        mqtt.publish("/multi4/colourcounters", JSON.stringify(colourCounters));
-
         if (measuredColour === currentColour) {
             console.log(
                 `### IT'S A MATCH : ${colourCodeToString(measuredColour)} == ${colourCodeToString(
@@ -136,7 +135,6 @@ router.post("/api/new-sequence", function (req, res, next) {
         // #endregion
 
         recording = true;
-        mqtt.publish("/multi4/status", "on");
         const now = new Date(Date.now());
 
         db.query(
@@ -182,7 +180,6 @@ router.post("/api/end-sequence", function (req, res, next) {
     if (recording) {
         const now = new Date(Date.now());
         recording = false;
-        mqtt.publish("/multi4/status", "off");
         console.table(lastSequence);
 
         db.query(`UPDATE Sequence SET end = ? WHERE id = ?`, [sqlDateFormat(now), currentSequenceId]);
@@ -199,13 +196,20 @@ router.post("/api/end-sequence", function (req, res, next) {
     }
 });
 // #endregion
-db.ping();
+
+setInterval(() => {
+    dbPingOK = false;
+    dbReachable();
+}, 10000);
+
 // #region Custom functions
 function dbReachable() {
     db.ping(err => {
         if (!err) {
+            dbPingOK = true;
             console.log("### Connected to DB");
         } else {
+            dbPingOK = false;
             console.error(err);
         }
     });
