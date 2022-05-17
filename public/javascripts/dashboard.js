@@ -113,11 +113,11 @@ setInterval(() => {
             if (response.recording) {
                 lblStatusBox.classList.remove("bg-danger", "bg-secondary");
                 lblStatusBox.classList.add("bg-success");
-                lblStatusText.textContent = "Recording";
+                lblStatusText.textContent = "On";
             } else {
                 lblStatusBox.classList.remove("bg-success", "bg-secondary");
                 lblStatusBox.classList.add("bg-danger");
-                lblStatusText.textContent = "Stopped";
+                lblStatusText.textContent = "Off";
             }
         },
     });

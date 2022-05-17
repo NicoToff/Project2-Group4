@@ -69,7 +69,7 @@ setInterval(() => {
     if (currentSequenceId != null && currentColour != null && recording === true) {
         const measuredColour = Number(rndCol());
         lastMeasure = measuredColour;
-        console.log(`### Measured colour : ${clr(measuredColour)}`);
+        console.log(`### Measured colour : ${colourCodeToString(measuredColour)}`);
 
         const now = new Date(Date.now());
 
@@ -81,11 +81,11 @@ setInterval(() => {
             }
         );
 
-        mqtt.publish("/multi4/lu", clr(lastMeasure), () => {
-            console.log(`${clr(lastMeasure)} SENT TO MQTT`);
+        mqtt.publish("/multi4/lu", colourCodeToString(lastMeasure), () => {
+            console.log(`${colourCodeToString(lastMeasure)} SENT TO MQTT`);
         });
 
-        lastSequence.push(clr(measuredColour));
+        lastSequence.push(colourCodeToString(measuredColour));
 
         // prettier-ignore
         switch(measuredColour){
@@ -97,8 +97,14 @@ setInterval(() => {
             default:      db.query(`UPDATE Sequence SET anomalies = ? WHERE id = ?`,[++colourCounters[ANOMALY],currentSequenceId]);break;
         }
 
+        mqtt.publish("/multi4/colourcounters", JSON.stringify(colourCounters));
+
         if (measuredColour === currentColour) {
-            console.log(`### IT'S A MATCH : ${clr(measuredColour)} == ${clr(currentColour)}`);
+            console.log(
+                `### IT'S A MATCH : ${colourCodeToString(measuredColour)} == ${colourCodeToString(
+                    currentColour
+                )}`
+            );
             db.query(
                 `UPDATE ChosenColour SET colour_count = ?
                  WHERE id = ?`,
@@ -130,6 +136,7 @@ router.post("/api/new-sequence", function (req, res, next) {
         // #endregion
 
         recording = true;
+        mqtt.publish("/multi4/status", "on");
         const now = new Date(Date.now());
 
         db.query(
@@ -143,8 +150,8 @@ router.post("/api/new-sequence", function (req, res, next) {
                     console.log(`########## New Sequence created: id#${result.insertId} ##########`);
                     currentSequenceId = result.insertId;
                     currentColour = Number(req.body.chosen_colour);
-                    mqtt.publish("/multi4/colour", clr(lastMeasure), () => {
-                        console.log(`${clr(currentColour)} SENT TO MQTT`);
+                    mqtt.publish("/multi4/colour", colourCodeToString(currentColour), () => {
+                        console.log(`${colourCodeToString(currentColour)} SENT TO MQTT`);
                     });
                     db.query(
                         `INSERT INTO ChosenColour (chosen_colour,Sequence_id) VALUES (?,?)`,
@@ -155,7 +162,7 @@ router.post("/api/new-sequence", function (req, res, next) {
                                 res.status(503).send(); // 503 Service Unavailable
                             } else {
                                 console.log(`### New ChosenColour created: id#${result.insertId}`);
-                                console.log(`##### Chosen colour == ${clr(currentColour)}`);
+                                console.log(`##### Chosen colour == ${colourCodeToString(currentColour)}`);
                                 currentColourId = result.insertId;
                                 res.status(200).json({ currentSequenceId, currentColour });
                             }
@@ -175,6 +182,7 @@ router.post("/api/end-sequence", function (req, res, next) {
     if (recording) {
         const now = new Date(Date.now());
         recording = false;
+        mqtt.publish("/multi4/status", "off");
         console.table(lastSequence);
 
         db.query(`UPDATE Sequence SET end = ? WHERE id = ?`, [sqlDateFormat(now), currentSequenceId]);
@@ -210,7 +218,7 @@ function sqlDateFormat(date) {
     return `${ymd} ${time}`; // Returns e.g.: 2022-05-13 12:25:12
 }
 // prettier-ignore
-function clr(colour) {
+function colourCodeToString(colour) {
     switch(colour) {
         case WHITE:  return "white";
         case BLUE:   return "blue";
