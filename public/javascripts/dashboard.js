@@ -36,7 +36,7 @@ start.addEventListener("click", () => {
         url: "/dashboard/api/new-sequence",
         data: {
             comment: txtComment.value,
-            chosen_colour: clientChosenColour ?? rndCol(),
+            chosen_colour: clientChosenColour,
         },
         dataType: "json",
         success: function (response) {
@@ -160,9 +160,9 @@ function colourTheBox(box, colour) {
 /**
  * @returns 0 to 4
  */
-function rndCol() {
+/*function rndCol() {
     return Math.floor(Math.random() * 5);
-}
+}*/
 
 /**
  * Returns a number base on the input from the html file.
