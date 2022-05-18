@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../modules/db");
+
 // #region MQTT
 const mqtt = require("mqtt").connect("mqtt://helhatechniquecharleroi.xyz:1883", {
     username: "multi4",
@@ -13,9 +14,6 @@ mqtt.on("message", (topic, message) => {
 });
 // #endregion
 
-const [WHITE, BLUE, BLACK, RED, GREEN, ANOMALY] = [0, 1, 2, 3, 4, 5];
-const COLOUR_CHOICE_CODE = 3;
-const STATE_CHANGE_CODE = 4;
 const { SerialPort } = require("serialport"); // See https://serialport.io/docs/guide-usage
 const { ReadlineParser } = require("@serialport/parser-readline"); // See https://serialport.io/docs/api-parser-readline
 
@@ -25,8 +23,14 @@ const port = new SerialPort({
     endOnClose: true,
     parity: "none",
 });
-dbReachable();
+const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
 
+// Useful constants
+const [WHITE, BLUE, BLACK, RED, GREEN, ANOMALY] = [0, 1, 2, 3, 4, 5];
+const COLOUR_CHOICE_CODE = 3;
+const STATE_CHANGE_CODE = 4;
+
+// Variable sent to DB and client
 let currentSequenceId = null;
 let currentColourId = null;
 
@@ -40,6 +44,14 @@ let recording = false;
 let arduinoReady = false;
 let dbPingOK = false;
 
+// Checking once if DB is reachable...
+dbReachable();
+// ... then every 10 sec
+setInterval(() => {
+    dbPingOK = false;
+    dbReachable();
+}, 10000);
+
 /* GET home page. */
 router.get("/", function (req, res, next) {
     res.status(200).render("dashboard");
@@ -49,20 +61,16 @@ router.post("/", function (req, res, next) {
     res.status(200).json({ currentSequenceId, currentColour, matchCounter });
 });
 
-const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
-
 /* Every time data is received from the Arduino Mega, the function triggers.
    The data received is of type "string" */
 parser.on("data", data => {
-    if(data.length === COLOUR_CHOICE_CODE) {
+    if (data.length === COLOUR_CHOICE_CODE) {
         console.log(`Colour chosen = ${colourCodeToString(Number(parseArduinoData(data)))}`);
         currentColour = Number(parseArduinoData(data));
         arduinoReady = true;
-    }
-    else if (data.length >= STATE_CHANGE_CODE) {
+    } else if (data.length >= STATE_CHANGE_CODE) {
         arduinoReady = false;
-    }
-    else if (currentSequenceId != null && currentColour != null && recording && arduinoReady) {
+    } else if (currentSequenceId != null && currentColour != null && recording && arduinoReady) {
         const measuredColour = Number(data);
         lastMeasure = measuredColour;
         console.log(`### Measured colour : ${colourCodeToString(measuredColour)}`);
@@ -115,18 +123,11 @@ parser.on("data", data => {
     }
 });
 
-// #region Client AJAX request
-/* Client requesting all the colours counts + recording status 
-   Happens every second. */
-router.post("/api/fetch-data", (req, res) => {
-    res.status(200).json({ colourCounters, recording, dbPingOK, arduinoReady, currentColour });
-});
-// #endregion
-
 // #region FakeMeasurements
 /* POST pretending to take a measurement every second */
-/* THIS WILL LATER BE PUT IN parser.on("data", ... ) */
-/*setInterval(() => {
+/*
+const rndCol = () => Math.floor(Math.random() * 5 + (Math.random() > 0.95 ? 1 : 0)).toString();
+setInterval(() => {
     if (currentSequenceId != null && currentColour != null && recording === true) {
         const measuredColour = data;
         lastMeasure = measuredColour;
@@ -182,22 +183,23 @@ router.post("/api/fetch-data", (req, res) => {
 // #endregion
 
 // #region Create Sequence + ChosenColour in DB
+/* Doesn't do anything if already recording data OR if Arduino isn't ready */
 router.post("/api/new-sequence", function (req, res, next) {
     if (!recording && arduinoReady) {
         recording = true;
         // #region Global variable reset
         currentSequenceId = null;
         currentColourId = null;
-    //    currentColour = null;
+        //    currentColour = null;
         lastMeasure = null;
         colourCounters.fill(0);
         matchCounter = 0;
         lastSequence = [];
         // #endregion
 
-        
         const now = new Date(Date.now());
 
+        // Creating a new Sequence entry in the DB
         db.query(
             `INSERT INTO Sequence (start,comment) VALUES (?,?)`,
             [sqlDateFormat(now), req.body.comment],
@@ -208,15 +210,13 @@ router.post("/api/new-sequence", function (req, res, next) {
                 } else {
                     console.log(`########## New Sequence created: id#${result.insertId} ##########`);
                     currentSequenceId = result.insertId;
-                    console.log("Client chosen colour : ");
-                    console.log(req.body.clientChosenColour)               
-                    if(req.body.clientChosenColour != -1) {
-                        // If a colour choice was made clientside, we overwrite.
+                    if (req.body.clientChosenColour != -1) {
+                        // If a colour choice was made client-side, we overwrite the one made on Arduino.
                         currentColour = Number(req.body.clientChosenColour);
                     }
-                    mqtt.publish("/multi4/couleur", colourCodeToString(currentColour), () => {
-                        console.log(`${colourCodeToString(currentColour)} SENT TO MQTT`);
-                    });
+                    mqtt.publish("/multi4/couleur", colourCodeToString(currentColour));
+
+                    // Creating a new ChosenColour entry in the DB
                     db.query(
                         `INSERT INTO ChosenColour (chosen_colour,Sequence_id) VALUES (?,?)`,
                         [currentColour, currentSequenceId],
@@ -242,12 +242,12 @@ router.post("/api/new-sequence", function (req, res, next) {
 // #endregion
 
 // #region Ending The Sequence
+/* Doesn't do anything if not recording */
 router.post("/api/end-sequence", function (req, res, next) {
     if (recording) {
-        const now = new Date(Date.now());
         recording = false;
         arduinoReady = false;
-        console.table(lastSequence);
+        const now = new Date(Date.now());
 
         db.query(`UPDATE Sequence SET end = ? WHERE id = ?`, [sqlDateFormat(now), currentSequenceId]);
 
@@ -260,12 +260,17 @@ router.post("/api/end-sequence", function (req, res, next) {
 });
 // #endregion
 
-setInterval(() => {
-    dbPingOK = false;
-    dbReachable();
-}, 10000);
+// #region Client AJAX request
+/* Client requesting all useful data. Happens every second. */
+router.post("/api/fetch-data", (req, res) => {
+    res.status(200).json({ colourCounters, recording, dbPingOK, arduinoReady, currentColour });
+});
+// #endregion
 
 // #region Custom functions
+/**
+ * Simple DB ping with global variable modification.
+ */
 function dbReachable() {
     db.ping(err => {
         if (!err) {
@@ -277,13 +282,22 @@ function dbReachable() {
         }
     });
 }
-
+/**
+ * Given a date, returns a string that can be sent in an SQL query
+ * @param {Date} date A valid Date object
+ * @returns A formatted string valid for SQL
+ */
 function sqlDateFormat(date) {
-    const splitDate = date.toISOString().split("T");
+    const splitDate = date?.toISOString().split("T");
     const ymd = splitDate[0];
     const time = splitDate[1].split(".")[0];
     return `${ymd} ${time}`; // Returns e.g.: 2022-05-13 12:25:12
 }
+/**
+ * Convert a colour code into a user-readable string.
+ * @param {number} colour 0 to 5
+ * @returns As a string: "white", "blue", "black"...
+ */
 // prettier-ignore
 function colourCodeToString(colour) {
     switch(colour) {
@@ -297,15 +311,13 @@ function colourCodeToString(colour) {
 }
 
 /**
- * Removes the "$" sign from some signals and returns the useful part.
- * @param {string} data 
+ * Removes the "$" sign from the signals and returns the useful part.
+ * @param {string} data e.g. : "$ 4", "$ 99" ...
  * @returns The useful part of the data
  */
 function parseArduinoData(data) {
     return data.split(" ")[1];
 }
-
-const rndCol = () => Math.floor(Math.random() * 5 + (Math.random() > 0.95 ? 1 : 0)).toString();
 // #endregion
 
 module.exports = router;

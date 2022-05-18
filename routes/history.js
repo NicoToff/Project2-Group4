@@ -7,8 +7,7 @@ const db = require("../modules/db");
 router.get("/", function (req, res, next) {
     db.query(`SELECT * FROM Sequence;`, (error, result, field) => {
         if (!error) {
-            console.log(result);
-            console.log("### Requete terminée");
+            console.log("### SELECT query has completed correctly");
             res.render("history", { result });
         } else {
             console.log(`${error?.code} : ${error?.sqlMessage}`);
@@ -17,6 +16,7 @@ router.get("/", function (req, res, next) {
     });
 });
 
+/* GET history-measure-chosen page with chosen colour total. */
 router.get("/chosen/:id", function (req, res, next) {
     const selectedId = req.params.id;
     db.query(
@@ -24,7 +24,7 @@ router.get("/chosen/:id", function (req, res, next) {
         [selectedId],
         (error, result, field) => {
             if (!error) {
-                console.log("### Requete terminée");
+                console.log("### SELECT query has completed correctly");
                 result = result[0];
                 res.render("history-measure-chosen", { result, selectedId });
             } else {
@@ -35,11 +35,12 @@ router.get("/chosen/:id", function (req, res, next) {
     );
 });
 
+/* GET history-measure page containing all Measures for a given Sequence. */
 router.get("/:id", function (req, res, next) {
     const selectedId = req.params.id;
     db.query(`SELECT * FROM Measure WHERE Measure.Sequence_id = ?`, [selectedId], (error, result, field) => {
         if (!error) {
-            console.log("### Requete terminée");
+            console.log("### SELECT query has completed correctly");
             res.render("history-measure", { result, selectedId });
         } else {
             console.log(`${error?.code} : ${error?.sqlMessage}`);
