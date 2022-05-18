@@ -7,32 +7,37 @@
 #define COL_OUT 36
 #define LED_SENSOR 22
 #define MH_OUT A8
-unsigned long hl, ll, lh ,hh;
-LiquidCrystal lcd( 8,  9,  4,  5,  6,  7);
-String colors[] = {"white","blue","black","red","green"};
-byte i = 0;
+
+unsigned long hl, ll, lh, hh; // first letter is for S2, second is for S3; h is HIGH, l is LOW
+LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
+String colors[] = {"white", "blue", "black", "red", "green"};
+byte chosenColour = 0;
 byte count = 0;
-byte val_count = 0;
+byte measureTaken = 0;
 unsigned long times;
-bool bpValidate = 1;
-bool state_= 1;
-bool bp_reset = 0;
+bool bpValidate = false;
+bool measuring = false;
+bool bp_reset = false;
 
-void changeColor() {
-  i++;
-  if(i==5)
-    i = 0;
+// Three functions for interruptions
+void changeColor()
+{
+    chosenColour++;
+    if (chosenColour == 5)
+        chosenColour = 0;
 }
 
-void validateColor (){
-  bpValidate = 0;
+void validateColor()
+{
+    bpValidate = true;
 }
 
-void reset(){
-  bp_reset = 1;
-  
+void reset()
+{
+    bp_reset = true;
 }
 
+// latest calibration : 2022/05/18 13:24
 int colorValidator(unsigned long hl, unsigned long ll, unsigned long lh, unsigned long hh)
 {
     if (hl <= 12 &&
@@ -76,94 +81,115 @@ int colorValidator(unsigned long hl, unsigned long ll, unsigned long lh, unsigne
     }
 }
 
-void setup() {
-  pinMode(LED_SENSOR,OUTPUT);
-  pinMode(S0,OUTPUT);
-  pinMode(S1,OUTPUT);
-  pinMode(S2,OUTPUT);
-  pinMode(S3,OUTPUT);
-  pinMode(COL_OUT,INPUT);
-  pinMode(18,INPUT_PULLUP);
-  pinMode(19,INPUT_PULLUP);
-  pinMode(2,INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(18), changeColor, FALLING);
-  attachInterrupt(digitalPinToInterrupt(19), validateColor, FALLING);
-  attachInterrupt(digitalPinToInterrupt(2), reset, FALLING);
-  lcd.begin(2, 2);
-  Serial.begin(9600);
-  digitalWrite(S0,HIGH);
-  digitalWrite(S1,HIGH);
-  digitalWrite(LED_SENSOR,LOW);
+void setup()
+{
+    pinMode(LED_SENSOR, OUTPUT);
+    pinMode(S0, OUTPUT);
+    pinMode(S1, OUTPUT);
+    pinMode(S2, OUTPUT);
+    pinMode(S3, OUTPUT);
+    pinMode(COL_OUT, INPUT);
+    pinMode(18, INPUT_PULLUP);
+    pinMode(19, INPUT_PULLUP);
+    pinMode(2, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(18), changeColor, FALLING);
+    attachInterrupt(digitalPinToInterrupt(19), validateColor, FALLING);
+    attachInterrupt(digitalPinToInterrupt(2), reset, FALLING);
+    lcd.begin(2, 2);
+    Serial.begin(9600);
+    digitalWrite(S0, HIGH);
+    digitalWrite(S1, HIGH);
+    digitalWrite(LED_SENSOR, LOW);
 }
 
-void loop() {
-  lcd.setCursor(0,0);
-  lcd.print("Choose a color :");
+void loop()
+{
+    lcd.setCursor(0, 0);
+    lcd.print("Choose a color :");
 
-  do{
-    lcd.setCursor(0,1);
-    lcd.print(colors[i] + "  ");
-  }while(bpValidate);
-  bpValidate = 1;
-  
-  Serial.print("$ ");
-  Serial.println(i);
-  
-  lcd.setCursor(0,0);
-  lcd.print("color :         ");
-  lcd.setCursor(10,0);
-  lcd.print("Count:");
-  lcd.setCursor(12,1);
-  lcd.print(count);
-  
-  times = millis();
+    do
+    {
+        lcd.setCursor(0, 1);
+        lcd.print(colors[chosenColour] + "  ");
+    } while (!bpValidate);
+    bpValidate = false;
 
-  bp_reset = 0;
-  do{
-    if(state_ == 1  && analogRead(MH_OUT) < 500){
-      hl=0; ll=0; lh=0; hh=0;
-      delay(50);
-      for(int j = 0; j < 10; j++) {
-        digitalWrite(LED_SENSOR, HIGH);
-        digitalWrite(S2, HIGH);
-        digitalWrite(S3, LOW);
-        hl += pulseIn(COL_OUT, LOW);
-    
-        digitalWrite(S2, LOW);
-        digitalWrite(S3, LOW);
-        ll += pulseIn(COL_OUT, LOW);
-    
-        digitalWrite(S2, LOW);
-        digitalWrite(S3, HIGH);
-        lh += pulseIn(COL_OUT, LOW);
-    
-        digitalWrite(S2, HIGH);
-        digitalWrite(S3, HIGH);
-        hh += pulseIn(COL_OUT, LOW);
-    
-        digitalWrite(LED_SENSOR, LOW);
-      }
-      hl/=10; ll/=10; lh/=10; hh/=10;
-      
-      val_count = colorValidator(hl, ll, lh, hh);
-      
-      Serial.println(val_count); 
+    Serial.print("$ ");
+    Serial.println(chosenColour); // Sending chosen color
 
-      if (i == val_count) count += 1;
-      
-      digitalWrite(LED_SENSOR,LOW);
-      
-      times = millis();
-      state_ = 0;
-    }
-    
-    if(analogRead(MH_OUT)> 350) state_ = 1;
-    lcd.setCursor(12,1);
+    lcd.setCursor(0, 0);
+    lcd.print("color :         ");
+    lcd.setCursor(10, 0);
+    lcd.print("Count:");
+    lcd.setCursor(12, 1);
     lcd.print(count);
 
-  }while(bp_reset == 0 && times + 300000 > millis());
-  Serial.println("% 99");
-  i=0;
-  count = 0;
-  lcd.clear(); 
+    times = millis();
+
+    bp_reset = false;
+    do
+    {
+        if (measuring == false && analogRead(MH_OUT) < 350)
+        {
+            measuring = true;
+            // Start of average calculator -------------------
+            hl = 0;
+            ll = 0;
+            lh = 0;
+            hh = 0;
+            delay(50);
+            for (int j = 0; j < 10; j++)
+            {
+                digitalWrite(LED_SENSOR, HIGH);
+                digitalWrite(S2, HIGH);
+                digitalWrite(S3, LOW);
+                hl += pulseIn(COL_OUT, LOW);
+
+                digitalWrite(S2, LOW);
+                digitalWrite(S3, LOW);
+                ll += pulseIn(COL_OUT, LOW);
+
+                digitalWrite(S2, LOW);
+                digitalWrite(S3, HIGH);
+                lh += pulseIn(COL_OUT, LOW);
+
+                digitalWrite(S2, HIGH);
+                digitalWrite(S3, HIGH);
+                hh += pulseIn(COL_OUT, LOW);
+
+                digitalWrite(LED_SENSOR, LOW);
+            }
+            hl /= 10;
+            ll /= 10;
+            lh /= 10;
+            hh /= 10;
+            // End of average calculator -------------------
+
+            measureTaken = colorValidator(hl, ll, lh, hh);
+
+            Serial.println(measureTaken); // Sending measure
+
+            if (chosenColour == measureTaken)
+                count += 1;
+
+            digitalWrite(LED_SENSOR, LOW);
+
+            times = millis();
+        }
+
+        if (analogRead(MH_OUT) > 350)
+        {
+            measuring = false;
+        }
+        lcd.setCursor(12, 1);
+        lcd.print(count);
+
+    } while (bp_reset == false && times + 300000 > millis());
+    // Exiting the loop after 5 min of inactivity
+
+    Serial.println("% 99"); // Sending "END" signal
+    chosenColour = 0;
+    count = 0;
+
+    lcd.clear();
 }
