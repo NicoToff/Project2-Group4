@@ -2,13 +2,16 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../modules/db");
+// #region MQTT
 const mqtt = require("mqtt").connect("mqtt://helhatechniquecharleroi.xyz:1883", {
     username: "multi4",
     password: "multi4",
-
-    // reconnectPeriod: 1000,
-    // connectTimeout: 60000,
 });
+mqtt.subscribe(["/multi4/lu", "/multi4/couleur", "/multi4/cpt", "/multi4/sequence"]);
+mqtt.on("message", (topic, message) => {
+    console.log(`READING ${topic} : ${message}`);
+});
+// #endregion
 
 const [WHITE, BLUE, BLACK, RED, GREEN, ANOMALY] = [0, 1, 2, 3, 4, 5];
 const COLOUR_CHOICE_CODE = 3;
@@ -21,7 +24,8 @@ const port = new SerialPort({
     baudRate: 9600,
     endOnClose: true,
     parity: "none",
-}); 
+});
+dbReachable();
 
 let currentSequenceId = null;
 let currentColourId = null;
@@ -33,21 +37,32 @@ let lastMeasure = null;
 let colourCounters = [0, 0, 0, 0, 0, 0]; // white,blue,black,red,green,anomalies
 let lastSequence = [];
 let recording = false;
+let arduinoReady = false;
 let dbPingOK = false;
+
+/* GET home page. */
+router.get("/", function (req, res, next) {
+    res.status(200).render("dashboard");
+});
+/* Post current state (state management) */
+router.post("/", function (req, res, next) {
+    res.status(200).json({ currentSequenceId, currentColour, matchCounter });
+});
 
 const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
 
-/* The data is of type "string" */
+/* Every time data is received from the Arduino Mega, the function triggers.
+   The data received is of type "string" */
 parser.on("data", data => {
     if(data.length === COLOUR_CHOICE_CODE) {
         console.log(`Colour chosen = ${colourCodeToString(Number(parseArduinoData(data)))}`);
         currentColour = Number(parseArduinoData(data));
-        recording = true;
+        arduinoReady = true;
     }
     else if (data.length >= STATE_CHANGE_CODE) {
-        recording = false;
+        arduinoReady = false;
     }
-    else if (currentSequenceId != null && currentColour != null && recording === true) {
+    else if (currentSequenceId != null && currentColour != null && recording && arduinoReady) {
         const measuredColour = Number(data);
         lastMeasure = measuredColour;
         console.log(`### Measured colour : ${colourCodeToString(measuredColour)}`);
@@ -65,6 +80,9 @@ parser.on("data", data => {
         mqtt.publish("/multi4/lu", colourCodeToString(lastMeasure), () => {
             console.log(`${colourCodeToString(lastMeasure)} SENT TO MQTT`);
         });
+        mqtt.publish("/multi4/sequence", JSON.stringify(lastSequence), () => {
+            console.log(`${JSON.stringify(lastSequence)} SENT TO MQTT`);
+        });
 
         lastSequence.push(colourCodeToString(measuredColour));
 
@@ -79,11 +97,8 @@ parser.on("data", data => {
         }
 
         if (measuredColour === currentColour) {
-            console.log(
-                `### IT'S A MATCH : ${colourCodeToString(measuredColour)} == ${colourCodeToString(
-                    currentColour
-                )}`
-            );
+            // prettier-ignore
+            console.log(`### MATCH : ${colourCodeToString(measuredColour)} == ${colourCodeToString(currentColour)}`);
             db.query(
                 `UPDATE ChosenColour SET colour_count = ?
                 WHERE id = ?`,
@@ -100,26 +115,11 @@ parser.on("data", data => {
     }
 });
 
-dbReachable();
-
-mqtt.subscribe(["/multi4/lu", "/multi4/colour", "/multi4/cpt", "/multi4/sequence"]);
-mqtt.on("message", (topic, message) => {
-    console.log(`READING ${topic} : ${message}`);
-});
-/* GET home page. */
-router.get("/", function (req, res, next) {
-    res.status(200).render("dashboard");
-});
-/* Post current state (state management) */
-router.post("/", function (req, res, next) {
-    res.status(200).json({ currentSequenceId, currentColour, matchCounter });
-});
-
 // #region Client AJAX request
 /* Client requesting all the colours counts + recording status 
    Happens every second. */
 router.post("/api/fetch-data", (req, res) => {
-    res.status(200).json({ colourCounters, recording, dbPingOK });
+    res.status(200).json({ colourCounters, recording, dbPingOK, arduinoReady, currentColour });
 });
 // #endregion
 
@@ -183,18 +183,19 @@ router.post("/api/fetch-data", (req, res) => {
 
 // #region Create Sequence + ChosenColour in DB
 router.post("/api/new-sequence", function (req, res, next) {
-    if (!recording) {
+    if (!recording && arduinoReady) {
+        recording = true;
         // #region Global variable reset
         currentSequenceId = null;
         currentColourId = null;
-        currentColour = null;
+    //    currentColour = null;
         lastMeasure = null;
         colourCounters.fill(0);
         matchCounter = 0;
         lastSequence = [];
         // #endregion
 
-        recording = true;
+        
         const now = new Date(Date.now());
 
         db.query(
@@ -206,11 +207,14 @@ router.post("/api/new-sequence", function (req, res, next) {
                     res.status(503).send(); // 503 Service Unavailable
                 } else {
                     console.log(`########## New Sequence created: id#${result.insertId} ##########`);
-                    currentSequenceId = result.insertId;                    
-                    if(req.body.chosen_colour != null){
-                        currentColour = Number(req.body.chosen_colour);
+                    currentSequenceId = result.insertId;
+                    console.log("Client chosen colour : ");
+                    console.log(req.body.clientChosenColour)               
+                    if(req.body.clientChosenColour != -1) {
+                        // If a colour choice was made clientside, we overwrite.
+                        currentColour = Number(req.body.clientChosenColour);
                     }
-                    mqtt.publish("/multi4/colour", colourCodeToString(currentColour), () => {
+                    mqtt.publish("/multi4/couleur", colourCodeToString(currentColour), () => {
                         console.log(`${colourCodeToString(currentColour)} SENT TO MQTT`);
                     });
                     db.query(
@@ -224,7 +228,7 @@ router.post("/api/new-sequence", function (req, res, next) {
                                 console.log(`### New ChosenColour created: id#${result.insertId}`);
                                 console.log(`##### Chosen colour == ${colourCodeToString(currentColour)}`);
                                 currentColourId = result.insertId;
-                                res.status(200).json({ currentSequenceId, currentColour });
+                                res.status(200).json({ currentSequenceId });
                             }
                         }
                     );
@@ -242,13 +246,10 @@ router.post("/api/end-sequence", function (req, res, next) {
     if (recording) {
         const now = new Date(Date.now());
         recording = false;
+        arduinoReady = false;
         console.table(lastSequence);
 
         db.query(`UPDATE Sequence SET end = ? WHERE id = ?`, [sqlDateFormat(now), currentSequenceId]);
-
-        mqtt.publish("/multi4/sequence", JSON.stringify(lastSequence), () => {
-            console.log(`${JSON.stringify(lastSequence)} SENT TO MQTT`);
-        });
 
         console.log(`########## End of Sequence id=${currentSequenceId} at ${sqlDateFormat(now)} ##########`);
 
@@ -296,7 +297,7 @@ function colourCodeToString(colour) {
 }
 
 /**
- * Removes the "S" sign from some signals and returns the useful part.
+ * Removes the "$" sign from some signals and returns the useful part.
  * @param {string} data 
  * @returns The useful part of the data
  */

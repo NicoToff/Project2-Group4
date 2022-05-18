@@ -19,8 +19,6 @@ $.ajax({
         if (response.currentSequenceId != null) {
             data.datasets[0].label = `Sequence n°${response.currentSequenceId}`;
             myChart.update();
-            currentColour = response.currentColour;
-            colourTheBox(chosenColourBox, currentColour);
         }
     },
 });
@@ -36,14 +34,12 @@ start.addEventListener("click", () => {
         url: "/dashboard/api/new-sequence",
         data: {
             comment: txtComment.value,
-            chosen_colour: clientChosenColour,
+            clientChosenColour: clientChosenColour,
         },
         dataType: "json",
         success: function (response) {
             data.datasets[0].label = `Sequence n°${response.currentSequenceId}`;
-            myChart.update();
-            currentColour = response.currentColour;
-            colourTheBox(chosenColourBox, currentColour);
+            myChart.update();            
         },
     });
 });
@@ -102,6 +98,7 @@ const myChart = new Chart(barGraph, config);
 const lblStatusBox = document.getElementById("status");
 const lblStatusText = document.getElementById("status-text");
 const lblChosenColourCounter = document.getElementById("chosen-colour-counter");
+const NO_CHOICE = 5;
 setInterval(() => {
     $.ajax({
         type: "post",
@@ -109,7 +106,14 @@ setInterval(() => {
         dataType: "json",
         success: function (response) {
             data.datasets[0].data = [...response.colourCounters];
-            lblChosenColourCounter.textContent = response.colourCounters[currentColour] ?? "--";
+            currentColour = response.currentColour ?? NO_CHOICE;
+            colourTheBox(chosenColourBox, currentColour);
+            if(currentColour === NO_CHOICE) {
+                lblChosenColourCounter.textContent = "-";
+            }
+            else {
+                lblChosenColourCounter.textContent = response.colourCounters[currentColour];
+            }
             if (response.dbPingOK === true) {
                 lblDbOK.textContent = "DB reachable";
                 lblDbOK.classList.remove("bg-danger");
@@ -120,12 +124,20 @@ setInterval(() => {
                 lblDbOK.classList.add("bg-danger");
             }
             myChart.update();
-            if (response.recording) {
-                lblStatusBox.classList.remove("bg-danger", "bg-secondary");
+            if (response.recording && response.arduinoReady) {
+                lblStatusBox.classList.remove("bg-danger", "bg-warning", "bg-secondary", "bg-info");
                 lblStatusBox.classList.add("bg-success");
                 lblStatusText.textContent = "On";
+            } else if (response.recording && !response.arduinoReady) {
+                lblStatusBox.classList.remove("bg-danger", "bg-warning", "bg-secondary", "bg-success");
+                lblStatusBox.classList.add("bg-info");
+                lblStatusText.textContent = "Click END";            
+            } else if (response.arduinoReady) {
+                lblStatusBox.classList.remove("bg-success", "bg-danger", "bg-secondary", "bg-info");
+                lblStatusBox.classList.add("bg-warning");
+                lblStatusText.textContent = "Ready";            
             } else {
-                lblStatusBox.classList.remove("bg-success", "bg-secondary");
+                lblStatusBox.classList.remove("bg-success", "bg-warning", "bg-secondary", "bg-info");
                 lblStatusBox.classList.add("bg-danger");
                 lblStatusText.textContent = "Off";
             }
@@ -143,9 +155,10 @@ function colourTheBox(box, colour) {
         "bg-danger",
         "bg-success",
         "bg-primary",
-        "bg-dark"
+        "bg-dark",
+        "bg-info"
     );
-    const [WHITE, BLUE, BLACK, RED, GREEN] = [0, 1, 2, 3, 4];
+    const [WHITE, BLUE, BLACK, RED, GREEN, NO_CHOICE] = [0, 1, 2, 3, 4, 5];
     let bootstrapBgClass = "bg-";
     // prettier-ignore
     switch (colour) {
@@ -154,6 +167,7 @@ function colourTheBox(box, colour) {
         case BLACK: bootstrapBgClass += "dark";    break;
         case RED:   bootstrapBgClass += "danger";  break;
         case GREEN: bootstrapBgClass += "success"; break;
+        case NO_CHOICE: bootstrapBgClass += "warning"; break;
     }
     box.classList.add(bootstrapBgClass);
 }
@@ -173,7 +187,7 @@ function colourTheBox(box, colour) {
 function toColorCode(option) {
     switch (option) {
         case "-":
-            return null;
+            return -1;
         case "White":
             return 0;
         case "Blue":
