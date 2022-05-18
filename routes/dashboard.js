@@ -36,7 +36,7 @@ let currentColourId = null;
 
 let currentColour = null;
 let matchCounter = 0;
-let lastMeasure = null;
+let lastMeasure = null; // Never actually read, but could be useful in the global scope
 
 let colourCounters = [0, 0, 0, 0, 0, 0]; // white,blue,black,red,green,anomalies
 let lastSequence = [];
@@ -52,7 +52,7 @@ setInterval(() => {
     dbReachable();
 }, 10000);
 
-/* GET home page. */
+/* GET home page route. */
 router.get("/", function (req, res, next) {
     res.status(200).render("dashboard");
 });
@@ -64,12 +64,14 @@ router.post("/", function (req, res, next) {
 /* Every time data is received from the Arduino Mega, the function triggers.
    The data received is of type "string" */
 parser.on("data", data => {
+    // If the data is the colour choice, then...
     if (data.length === COLOUR_CHOICE_CODE) {
-        console.log(`Colour chosen = ${colourCodeToString(Number(parseArduinoData(data)))}`);
         currentColour = Number(parseArduinoData(data));
         arduinoReady = true;
+        // ... otherwise, if it's the reset signal, then...
     } else if (data.length >= STATE_CHANGE_CODE) {
         arduinoReady = false;
+        // ... finally, if the data is a measure, and the DB is ready to write the date, then :
     } else if (currentSequenceId != null && currentColour != null && recording && arduinoReady) {
         const measuredColour = Number(data);
         lastMeasure = measuredColour;
@@ -85,23 +87,19 @@ parser.on("data", data => {
             }
         );
 
-        mqtt.publish("/multi4/lu", colourCodeToString(lastMeasure), () => {
-            console.log(`${colourCodeToString(lastMeasure)} SENT TO MQTT`);
-        });
-        mqtt.publish("/multi4/sequence", JSON.stringify(lastSequence), () => {
-            console.log(`${JSON.stringify(lastSequence)} SENT TO MQTT`);
-        });
+        mqtt.publish("/multi4/lu", colourCodeToString(measuredColour));
 
         lastSequence.push(colourCodeToString(measuredColour));
+        mqtt.publish("/multi4/sequence", JSON.stringify(lastSequence));
 
         // prettier-ignore
         switch(measuredColour){
-            case WHITE:   db.query(`UPDATE Sequence SET w_count = ? WHERE id = ?`,  [++colourCounters[WHITE],currentSequenceId]);break;
-            case BLUE:    db.query(`UPDATE Sequence SET u_count = ? WHERE id = ?`,  [++colourCounters[BLUE],currentSequenceId]);break;
-            case BLACK:   db.query(`UPDATE Sequence SET b_count = ? WHERE id = ?`,  [++colourCounters[BLACK],currentSequenceId]);break;
-            case RED:     db.query(`UPDATE Sequence SET r_count = ? WHERE id = ?`,  [++colourCounters[RED],currentSequenceId]);break;
-            case GREEN:   db.query(`UPDATE Sequence SET g_count = ? WHERE id = ?`,  [++colourCounters[GREEN],currentSequenceId]);break;
-            default:      db.query(`UPDATE Sequence SET anomalies = ? WHERE id = ?`,[++colourCounters[ANOMALY],currentSequenceId]);break;
+            case WHITE: db.query(`UPDATE Sequence SET w_count = ? WHERE id = ?`,  [++colourCounters[WHITE],currentSequenceId]);  break;
+            case BLUE:  db.query(`UPDATE Sequence SET u_count = ? WHERE id = ?`,  [++colourCounters[BLUE],currentSequenceId]);   break;
+            case BLACK: db.query(`UPDATE Sequence SET b_count = ? WHERE id = ?`,  [++colourCounters[BLACK],currentSequenceId]);  break;
+            case RED:   db.query(`UPDATE Sequence SET r_count = ? WHERE id = ?`,  [++colourCounters[RED],currentSequenceId]);    break;
+            case GREEN: db.query(`UPDATE Sequence SET g_count = ? WHERE id = ?`,  [++colourCounters[GREEN],currentSequenceId]);  break;
+            default:    db.query(`UPDATE Sequence SET anomalies = ? WHERE id = ?`,[++colourCounters[ANOMALY],currentSequenceId]);break;
         }
 
         if (measuredColour === currentColour) {
@@ -116,9 +114,7 @@ parser.on("data", data => {
                     else console.log(`### ${result.info}`);
                 }
             );
-            mqtt.publish("/multi4/cpt", matchCounter.toString(), () => {
-                console.log(`${matchCounter} SENT TO MQTT`);
-            });
+            mqtt.publish("/multi4/cpt", matchCounter.toString());
         }
     }
 });
@@ -190,7 +186,7 @@ router.post("/api/new-sequence", function (req, res, next) {
         // #region Global variable reset
         currentSequenceId = null;
         currentColourId = null;
-        //    currentColour = null;
+        //    currentColour = null; // DO NOT reset this one!!
         lastMeasure = null;
         colourCounters.fill(0);
         matchCounter = 0;
@@ -282,6 +278,7 @@ function dbReachable() {
         }
     });
 }
+
 /**
  * Given a date, returns a string that can be sent in an SQL query
  * @param {Date} date A valid Date object
@@ -293,6 +290,7 @@ function sqlDateFormat(date) {
     const time = splitDate[1].split(".")[0];
     return `${ymd} ${time}`; // Returns e.g.: 2022-05-13 12:25:12
 }
+
 /**
  * Convert a colour code into a user-readable string.
  * @param {number} colour 0 to 5
@@ -313,7 +311,7 @@ function colourCodeToString(colour) {
 /**
  * Removes the "$" sign from the signals and returns the useful part.
  * @param {string} data e.g. : "$ 4", "$ 99" ...
- * @returns The useful part of the data
+ * @returns The useful part of the data, as a string
  */
 function parseArduinoData(data) {
     return data.split(" ")[1];
