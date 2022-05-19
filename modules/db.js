@@ -10,7 +10,7 @@ try {
         timezone: "Z", // Z = "UTC"
     });
 } catch (err) {
-    console.error("Connexion to database FAILED");
+    console.error("#!#!#!# Initial connexion to database FAILED");
 }
 
 module.exports = db;

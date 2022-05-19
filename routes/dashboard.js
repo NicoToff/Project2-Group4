@@ -3,16 +3,10 @@ const express = require("express");
 const router = express.Router();
 const db = require("../modules/db");
 
-// #region MQTT
 const mqtt = require("mqtt").connect("mqtt://helhatechniquecharleroi.xyz:1883", {
     username: "multi4",
     password: "multi4",
 });
-mqtt.subscribe(["/multi4/lu", "/multi4/couleur", "/multi4/cpt", "/multi4/sequence"]);
-mqtt.on("message", (topic, message) => {
-    console.log(`READING ${topic} : ${message}`);
-});
-// #endregion
 
 const { SerialPort } = require("serialport"); // See https://serialport.io/docs/guide-usage
 const { ReadlineParser } = require("@serialport/parser-readline"); // See https://serialport.io/docs/api-parser-readline
@@ -36,7 +30,7 @@ let currentColourId = null;
 
 let currentColour = null;
 let matchCounter = 0;
-let lastMeasure = null; // Never actually read, but could be useful in the global scope
+let lastMeasure = null; // Never actually read, but could be useful in the global scope later
 
 let colourCounters = [0, 0, 0, 0, 0, 0]; // white,blue,black,red,green,anomalies
 let lastSequence = [];
@@ -56,9 +50,9 @@ setInterval(() => {
 router.get("/", function (req, res, next) {
     res.status(200).render("dashboard");
 });
-/* Post current state (state management) */
+/* If any, post current Sequence id (state management) */
 router.post("/", function (req, res, next) {
-    res.status(200).json({ currentSequenceId, currentColour, matchCounter });
+    res.status(200).json({ currentSequenceId });
 });
 
 /* Every time data is received from the Arduino Mega, the function triggers.
@@ -183,10 +177,11 @@ setInterval(() => {
 router.post("/api/new-sequence", function (req, res, next) {
     if (!recording && arduinoReady) {
         recording = true;
+
         // #region Global variable reset
         currentSequenceId = null;
         currentColourId = null;
-        //    currentColour = null; // DO NOT reset this one!!
+        // currentColour = null; // DO NOT reset this one! It's taken care of by the Arduino.
         lastMeasure = null;
         colourCounters.fill(0);
         matchCounter = 0;
@@ -207,7 +202,7 @@ router.post("/api/new-sequence", function (req, res, next) {
                     console.log(`########## New Sequence created: id#${result.insertId} ##########`);
                     currentSequenceId = result.insertId;
                     if (req.body.clientChosenColour != -1) {
-                        // If a colour choice was made client-side, we overwrite the one made on Arduino.
+                        // If a colour choice was made client-side, we overwrite the one made on the Arduino.
                         currentColour = Number(req.body.clientChosenColour);
                     }
                     mqtt.publish("/multi4/couleur", colourCodeToString(currentColour));
@@ -257,7 +252,7 @@ router.post("/api/end-sequence", function (req, res, next) {
 // #endregion
 
 // #region Client AJAX request
-/* Client requesting all useful data. Happens every second. */
+/* Client requesting all useful data to update UI. Happens every second. */
 router.post("/api/fetch-data", (req, res) => {
     res.status(200).json({ colourCounters, recording, dbPingOK, arduinoReady, currentColour });
 });
@@ -274,6 +269,7 @@ function dbReachable() {
             console.log("### Connected to DB");
         } else {
             dbPingOK = false;
+            console.error("### ERROR with DB");
             console.error(err);
         }
     });
@@ -285,7 +281,7 @@ function dbReachable() {
  * @returns A formatted string valid for SQL
  */
 function sqlDateFormat(date) {
-    const splitDate = date?.toISOString().split("T");
+    const splitDate = date?.toISOString().split("T"); // toISOString() returns: 2022/05/12T15:28:46.493Z
     const ymd = splitDate[0];
     const time = splitDate[1].split(".")[0];
     return `${ymd} ${time}`; // Returns e.g.: 2022-05-13 12:25:12

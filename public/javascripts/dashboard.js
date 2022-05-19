@@ -1,16 +1,18 @@
+"use strict";
 document.querySelectorAll(".navbar-nav a")[0].classList.add("active");
 
 const optSelectColor = document.getElementById("colour-select");
 const txtComment = document.getElementById("comment");
-const chosenColourBox = document.getElementById("chosen-colour");
+const lblChosenColourBox = document.getElementById("chosen-colour");
 const lblDbOK = document.getElementById("db-ok-badge");
 let currentColour;
+
 // #region State management
-/* Reset select box and comments */
+/* Reset select box and comments on page (re)load */
 optSelectColor.value = "-";
 txtComment.value = "";
 
-/* If a sequence is running, we fetch its ID to display it */
+/* If a sequence is running or available, we fetch its ID to display it */
 $.ajax({
     type: "post",
     url: "/dashboard",
@@ -25,9 +27,9 @@ $.ajax({
 // #endregion
 
 // #region Start & End Buttons
-const start = document.getElementById("start");
+const btnStart = document.getElementById("start");
 
-start.addEventListener("click", () => {
+btnStart.addEventListener("click", () => {
     const clientChosenColour = toColorCode(optSelectColor.value);
     $.ajax({
         type: "post",
@@ -39,13 +41,13 @@ start.addEventListener("click", () => {
         dataType: "json",
         success: function (response) {
             data.datasets[0].label = `Sequence n°${response.currentSequenceId}`;
-            myChart.update();            
+            myChart.update();
         },
     });
 });
 
-const end = document.getElementById("end");
-end.addEventListener("click", () => {
+const btnEnd = document.getElementById("end");
+btnEnd.addEventListener("click", () => {
     $.post("/dashboard/api/end-sequence");
     optSelectColor.value = "-";
     txtComment.value = "";
@@ -99,21 +101,28 @@ const lblStatusBox = document.getElementById("status");
 const lblStatusText = document.getElementById("status-text");
 const lblChosenColourCounter = document.getElementById("chosen-colour-counter");
 const NO_CHOICE = 5;
+
 setInterval(() => {
     $.ajax({
         type: "post",
         url: "/dashboard/api/fetch-data",
         dataType: "json",
         success: function (response) {
+            // Updating the chart
             data.datasets[0].data = [...response.colourCounters];
+            myChart.update();
+
+            // Updating "Colour Counter"
             currentColour = response.currentColour ?? NO_CHOICE;
-            colourTheBox(chosenColourBox, currentColour);
-            if(currentColour === NO_CHOICE) {
+            colourTheBox(lblChosenColourBox, currentColour);
+
+            if (currentColour === NO_CHOICE) {
                 lblChosenColourCounter.textContent = "-";
-            }
-            else {
+            } else {
                 lblChosenColourCounter.textContent = response.colourCounters[currentColour];
             }
+
+            // Updating DB (un)available
             if (response.dbPingOK === true) {
                 lblDbOK.textContent = "DB reachable";
                 lblDbOK.classList.remove("bg-danger");
@@ -123,7 +132,8 @@ setInterval(() => {
                 lblDbOK.classList.remove("bg-success");
                 lblDbOK.classList.add("bg-danger");
             }
-            myChart.update();
+
+            // Updating "Status" box
             if (response.recording && response.arduinoReady) {
                 lblStatusBox.classList.remove("bg-danger", "bg-warning", "bg-secondary", "bg-info");
                 lblStatusBox.classList.add("bg-success");
@@ -131,11 +141,11 @@ setInterval(() => {
             } else if (response.recording && !response.arduinoReady) {
                 lblStatusBox.classList.remove("bg-danger", "bg-warning", "bg-secondary", "bg-success");
                 lblStatusBox.classList.add("bg-info");
-                lblStatusText.textContent = "Click END";            
+                lblStatusText.textContent = "Click END";
             } else if (response.arduinoReady) {
                 lblStatusBox.classList.remove("bg-success", "bg-danger", "bg-secondary", "bg-info");
                 lblStatusBox.classList.add("bg-warning");
-                lblStatusText.textContent = "Ready";            
+                lblStatusText.textContent = "Ready";
             } else {
                 lblStatusBox.classList.remove("bg-success", "bg-warning", "bg-secondary", "bg-info");
                 lblStatusBox.classList.add("bg-danger");
@@ -171,12 +181,6 @@ function colourTheBox(box, colour) {
     }
     box.classList.add(bootstrapBgClass);
 }
-/**
- * @returns 0 to 4
- */
-/*function rndCol() {
-    return Math.floor(Math.random() * 5);
-}*/
 
 /**
  * Returns a number base on the input from the html file.
@@ -200,5 +204,9 @@ function toColorCode(option) {
             return 4;
     }
 }
+
+/*function rndCol() {
+    return Math.floor(Math.random() * 5);
+}*/
 
 // #endregion
