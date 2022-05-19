@@ -1,0 +1,60 @@
+{% extends 'layout.twig' %}
+
+{% block deferScripts %}
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script defer src="/javascripts/dashboard.js"></script>
+{% endblock deferScripts %}
+
+{% block body %}
+<div class="container">
+    <h1>Dashboard</h1>
+    <div class="row">
+        <div class="col">
+            <p>Click the buttons to Start or End a sequence.</p>
+            <div class="d-grid gap-2">
+                <button class="btn btn-lg btn-success" id="start">Start</button>
+                <button class="btn btn-lg btn-warning" id="end">End</button>
+            </div>
+        </div>
+        <div class="col-3">
+            <h3>Choose color</h3>
+            <div class="form-group">
+                <select class="form-select" id="colour-select">
+                    <option>-</option>
+                    <option>White</option>
+                    <option>Blue</option>
+                    <option>Black</option>
+                    <option>Red</option>
+                    <option>Green</option>
+                </select>
+            </div>
+            <div class="form-floating mt-3">
+                <input type="text" class="form-control" maxlength="30" id="comment" placeholder="Keep it short">
+                <label for="floatingInput">Comment</label>
+            </div>
+        </div>
+        <div class="col-2">
+            <h3>Current colour &amp; count</h3>
+            <div class="card bg-warning form-control" id="chosen-colour">
+                <div class="card-body text-center">
+                    <h3 class="card-title" id="chosen-colour-counter">-</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-2">
+            <h3>Status</h3>
+            <div class="card bg-secondary mb-3" id="status">
+                <div class="card-body text-center">
+                    <h4 class="card-title" id="status-text"> ---- </h4>
+                </div>
+            </div>
+            <div class="text-center">
+                <span class="badge rounded-pill bg-danger" id="db-ok-badge">DB unreachable</span>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="mt-2">Latest sequence</h2>
+    <canvas id="myChart"></canvas>
+</div>
+{% endblock %}

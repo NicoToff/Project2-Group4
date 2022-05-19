@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Project 2</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" href="/images/favicon.png" />
+    <link rel="stylesheet" href="/stylesheets/yeti-bootswatch.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    {# See for template: https://bootswatch.com/yeti/ #}
+
+    {# Optional JavaScript #}
+    {# jQuery first, then Popper.js, then Bootstrap JS #}
+    <script defer src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script defer src="https://bootswatch.com/_vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    {% block deferScripts %}{% endblock deferScripts %}
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-2">
+        <div class="container">
+            <a class="navbar-brand" href="/">Project 2</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01"
+                aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarColor01">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/history">History</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% block body %}{% endblock %}
+
+    <footer class="bg-info text-center text-secondary mt-5">
+        <div class="container p-4">
+            <section class="mb-4">
+                {# Social media #}
+                <a class="btn btn-outline-light btn-floating m-1" href="https://gprivate.com/5z6s4" role="button">
+                    <i class="fab fa-google"></i></a>
+                <a class="btn btn-outline-light btn-floating m-1" href="https://www.linkedin.com/in/toffolo01/"
+                    role="button"><i class="fab fa-linkedin-in"></i></a>
+                <a class="btn btn-outline-light btn-floating m-1" href="https://github.com/NicoToff/Project2-Group4"
+                    role="button"><i class="fab fa-github"></i></a>
+            </section>
+            {# Social media #}
+
+            {# Section: Text #}
+            <section class="mb-4">
+                <blockquote class="blockquote">
+                    Project built with a LOT of sweat.
+                </blockquote>
+            </section>
+            {# Section: Text #}
+        </div>
+
+
+        <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.2);">
+            © 2021-2022 - HELHa - MOHAMMAD Sajad &amp; TOFFOLO Nicolas
+        </div>
+    </footer>
+
+</body>
+
+</html>

@@ -1,0 +1,49 @@
+{% extends 'layout.twig' %}
+
+{% block deferScripts %}
+<script defer src="/javascripts/history-measure.js"></script>
+{% endblock deferScripts %}
+
+{% block body %}
+<main class="container">
+    <h1>Sequence n°{{selectedId}}</h1>
+    <p>Display as : <button class="btn btn-info" id="swap-display">List</button></p>
+    <div id="display-area">
+        {% set counter = 1 %}
+        {% for measure in result %}
+        {% if measure.colour == 0 %}
+        <div class="btn btn-light p-4 m-1" title="{{ measure.timestamp | date(" Y/m/d H:i:s") }}"
+            data-id="{{ measure.id }}" data-colour="light">
+            <div style="min-width: 2em">{{ counter }}</div>
+        </div>
+        {% elseif measure.colour == 1 %}
+        <div class="btn btn-primary p-4 m-1" title="{{ measure.timestamp | date(" Y/m/d H:i:s") }}"
+            data-id="{{ measure.id }}" data-colour="primary">
+            <div style="min-width: 2em">{{ counter }}</div>
+        </div>
+        {% elseif measure.colour == 2 %}
+        <div class="btn btn-dark p-4 m-1" title="{{ measure.timestamp | date(" Y/m/d H:i:s") }}"
+            data-id="{{ measure.id }}" data-colour="dark">
+            <div style="min-width: 2em">{{ counter }}</div>
+        </div>
+        {% elseif measure.colour == 3 %}
+        <div class="btn btn-danger p-4 m-1" title="{{ measure.timestamp | date(" Y/m/d H:i:s") }}"
+            data-id="{{ measure.id }}" data-colour="danger">
+            <div style="min-width: 2em">{{ counter }}</div>
+        </div>
+        {% elseif measure.colour == 4 %}
+        <div class="btn btn-success p-4 m-1" title="{{ measure.timestamp | date(" Y/m/d H:i:s") }}"
+            data-id="{{ measure.id }}" data-colour="success">
+            <div style="min-width: 2em">{{ counter }}</div>
+        </div>
+        {% elseif measure.colour == 5 %}
+        <div class="btn btn-warning p-4 m-1" title="{{ measure.timestamp | date(" Y/m/d H:i:s") }}"
+            data-id="{{ measure.id }}" data-colour="warning">
+            <div style="min-width: 2em">{{ counter }}</div>
+        </div>
+        {% endif %}
+        {% set counter = counter + 1 %}
+        {% endfor %}
+    </div>
+</main>
+{% endblock body %}
