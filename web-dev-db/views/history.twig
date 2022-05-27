@@ -36,7 +36,7 @@
                 <td>{{ sequence.id }}</td>
                 <td>{{ sequence.start | date("Y/m/d H:i:s") }}</td>
                 <td>{% if sequence.end == null %}
-                    {{ "" }} {# Si une date est "null", twig envoie par défaut l'heure actuelle... #}
+                    {{ "" }} {# If a date is "null", twig returns the current time, so... #}
                     {% else %}
                     {{ sequence.end | date("Y/m/d H:i:s") }}
                     {% endif %}

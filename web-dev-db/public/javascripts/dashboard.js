@@ -205,8 +205,4 @@ function toColorCode(option) {
     }
 }
 
-/*function rndCol() {
-    return Math.floor(Math.random() * 5);
-}*/
-
 // #endregion

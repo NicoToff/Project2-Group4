@@ -113,65 +113,6 @@ parser.on("data", data => {
     }
 });
 
-// #region FakeMeasurements
-/* POST pretending to take a measurement every second */
-/*
-const rndCol = () => Math.floor(Math.random() * 5 + (Math.random() > 0.95 ? 1 : 0)).toString();
-setInterval(() => {
-    if (currentSequenceId != null && currentColour != null && recording === true) {
-        const measuredColour = data;
-        lastMeasure = measuredColour;
-        console.log(`### Measured colour : ${colourCodeToString(measuredColour)}`);
-
-        const now = new Date(Date.now());
-
-        db.query(
-            `INSERT INTO Measure (timestamp,colour,Sequence_id) VALUES (?,?,?)`,
-            [sqlDateFormat(now), measuredColour, currentSequenceId],
-            (err, result) => {
-                if (err) console.error(err);
-            }
-        );
-
-        mqtt.publish("/multi4/lu", colourCodeToString(lastMeasure), () => {
-            console.log(`${colourCodeToString(lastMeasure)} SENT TO MQTT`);
-        });
-
-        lastSequence.push(colourCodeToString(measuredColour));
-
-        // prettier-ignore
-        switch(measuredColour){
-            case WHITE:   db.query(`UPDATE Sequence SET w_count = ? WHERE id = ?`,  [++colourCounters[WHITE],currentSequenceId]);break;
-            case BLUE:    db.query(`UPDATE Sequence SET u_count = ? WHERE id = ?`,  [++colourCounters[BLUE],currentSequenceId]);break;
-            case BLACK:   db.query(`UPDATE Sequence SET b_count = ? WHERE id = ?`,  [++colourCounters[BLACK],currentSequenceId]);break;
-            case RED:     db.query(`UPDATE Sequence SET r_count = ? WHERE id = ?`,  [++colourCounters[RED],currentSequenceId]);break;
-            case GREEN:   db.query(`UPDATE Sequence SET g_count = ? WHERE id = ?`,  [++colourCounters[GREEN],currentSequenceId]);break;
-            default:      db.query(`UPDATE Sequence SET anomalies = ? WHERE id = ?`,[++colourCounters[ANOMALY],currentSequenceId]);break;
-        }
-
-        if (measuredColour === currentColour) {
-            console.log(
-                `### IT'S A MATCH : ${colourCodeToString(measuredColour)} == ${colourCodeToString(
-                    currentColour
-                )}`
-            );
-            db.query(
-                `UPDATE ChosenColour SET colour_count = ?
-                WHERE id = ?`,
-                [++matchCounter, currentColourId],
-                (err, result) => {
-                    if (err) console.error(err);
-                    else console.log(`### ${result.info}`);
-                }
-            );
-            mqtt.publish("/multi4/cpt", matchCounter.toString(), () => {
-                console.log(`${matchCounter} SENT TO MQTT`);
-            });
-        }
-    }
-}, 1000);*/
-// #endregion
-
 // #region Create Sequence + ChosenColour in DB
 /* Doesn't do anything if already recording data OR if Arduino isn't ready */
 router.post("/api/new-sequence", function (req, res, next) {
@@ -186,6 +127,8 @@ router.post("/api/new-sequence", function (req, res, next) {
         colourCounters.fill(0);
         matchCounter = 0;
         lastSequence = [];
+        mqtt.publish("/multi4/cpt", "0");
+        mqtt.publish("/multi4/lu", "");
         // #endregion
 
         const now = new Date(Date.now());

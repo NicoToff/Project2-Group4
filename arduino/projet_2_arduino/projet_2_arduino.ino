@@ -92,8 +92,6 @@ void setup()
     pinMode(18, INPUT_PULLUP);
     pinMode(19, INPUT_PULLUP);
     pinMode(2, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(18), changeColor, FALLING);
-    attachInterrupt(digitalPinToInterrupt(19), validateColor, FALLING);
     attachInterrupt(digitalPinToInterrupt(2), reset, FALLING);
     lcd.begin(2, 2);
     Serial.begin(9600);
@@ -106,13 +104,16 @@ void loop()
 {
     lcd.setCursor(0, 0);
     lcd.print("Choose a color :");
-
+    attachInterrupt(digitalPinToInterrupt(18), changeColor, FALLING);
+    attachInterrupt(digitalPinToInterrupt(19), validateColor, FALLING);
     do
     {
         lcd.setCursor(0, 1);
         lcd.print(colors[chosenColour] + "  ");
     } while (!bpValidate);
     bpValidate = false;
+    detachInterrupt(digitalPinToInterrupt(18));
+    detachInterrupt(digitalPinToInterrupt(19));
 
     Serial.print("$ ");
     Serial.println(chosenColour); // Sending chosen color
@@ -129,7 +130,7 @@ void loop()
     bp_reset = false;
     do
     {
-        if (measuring == false && analogRead(MH_OUT) < 350)
+        if (!measuring && analogRead(MH_OUT) < 350)
         {
             measuring = true;
             // Start of average calculator -------------------
