@@ -173,8 +173,6 @@ void loop()
             if (chosenColour == measureTaken)
                 count += 1;
 
-            digitalWrite(LED_SENSOR, LOW);
-
             times = millis();
         }
 
